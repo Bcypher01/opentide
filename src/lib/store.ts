@@ -27,6 +27,10 @@ interface OpentideState {
   heroDismissed: boolean;
   dismissHero: () => void;
 
+  /** local date (YYYY-MM-DD) the daily briefing was last collapsed/read */
+  briefingReadDate: string | null;
+  setBriefingReadDate: (d: string | null) => void;
+
   useUTC: boolean;
   toggleUTC: () => void;
 }
@@ -59,6 +63,9 @@ export const useStore = create<OpentideState>()(
       heroDismissed: false,
       dismissHero: () => set({ heroDismissed: true }),
 
+      briefingReadDate: null,
+      setBriefingReadDate: (d) => set({ briefingReadDate: d }),
+
       useUTC: false,
       toggleUTC: () => set((s) => ({ useUTC: !s.useUTC })),
     }),
@@ -68,6 +75,7 @@ export const useStore = create<OpentideState>()(
         watchlist: s.watchlist,
         useUTC: s.useUTC,
         heroDismissed: s.heroDismissed,
+        briefingReadDate: s.briefingReadDate,
         selectedAsset: s.selectedAsset,
       }),
     }

@@ -1,11 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import type { CalendarPayload } from "@/app/api/calendar/route";
+import {
+  IMPACT_COLOR,
+  filterEvents,
+  formatEventTime,
+} from "@/lib/calendar";
 import {
   SessionState,
   formatCountdown,
   type SessionId,
 } from "@/lib/sessions";
+import EconCalendar from "./EconCalendar";
 
 interface Props {
   now: Date;
@@ -13,6 +20,7 @@ interface Props {
   useUTC: boolean;
   selected: SessionId | null;
   onSelect: (id: SessionId | null) => void;
+  calendar?: CalendarPayload | null;
 }
 
 /** A band may wrap midnight UTC → render as up to two segments. */
@@ -25,12 +33,34 @@ function segments(start: number, end: number): Array<[number, number]> {
   ];
 }
 
-export default function SessionClock({ now, states, useUTC, selected, onSelect }: Props) {
+export default function SessionClock({
+  now,
+  states,
+  useUTC,
+  selected,
+  onSelect,
+  calendar = null,
+}: Props) {
   const t = now.getTime();
+  const [showAllEvents, setShowAllEvents] = useState(false);
 
   // Now-cursor position on the 24h UTC axis
   const nowFrac =
     (now.getUTCHours() * 60 + now.getUTCMinutes() + now.getUTCSeconds() / 60) / 1440;
+
+  // Today's economic events (24h UTC axis), as markers on the timeline.
+  // Past releases keep their slot, dimmed — pairs with "while you were away".
+  const todaysEvents = useMemo(() => {
+    if (!calendar?.events) return [];
+    const dayStart = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate()
+    );
+    return filterEvents(calendar.events, showAllEvents).filter(
+      (e) => e.ts >= dayStart && e.ts < dayStart + 86_400_000
+    );
+  }, [calendar, showAllEvents, now]);
 
   // Liquidity strip: intervals where ≥2 sessions are scheduled simultaneously
   const overlaps = useMemo(() => {
@@ -145,6 +175,36 @@ export default function SessionClock({ now, states, useUTC, selected, onSelect }
           ))}
         </div>
 
+        {/* Economic event markers — releases scheduled today, on the same
+            24h axis. Diamonds are colored by impact; past ones dim. */}
+        {todaysEvents.length > 0 && (
+          <div className="relative mt-1 h-3 w-full" aria-label="Economic releases today">
+            {todaysEvents.map((e) => {
+              const frac =
+                (new Date(e.ts).getUTCHours() * 60 +
+                  new Date(e.ts).getUTCMinutes()) /
+                1440;
+              const past = e.ts <= t;
+              return (
+                <span
+                  key={e.id}
+                  title={`${e.title} (${e.country}) — ${formatEventTime(e.ts, useUTC)}${past ? " · released" : ""}`}
+                  className="absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[2px]"
+                  style={{
+                    left: `${frac * 100}%`,
+                    backgroundColor: IMPACT_COLOR[e.impact],
+                    opacity: past ? 0.3 : 0.95,
+                    boxShadow:
+                      !past && e.impact === "High"
+                        ? `0 0 6px ${IMPACT_COLOR.High}88`
+                        : "none",
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
+
         {/* Now cursor */}
         <div
           className="pointer-events-none absolute -top-1 -bottom-1 z-20 w-px bg-accent"
@@ -201,6 +261,16 @@ export default function SessionClock({ now, states, useUTC, selected, onSelect }
           );
         })}
       </div>
+
+      {/* Economic calendar: countdown chips, explainers, full list */}
+      <EconCalendar
+        calendar={calendar}
+        now={t}
+        states={states}
+        useUTC={useUTC}
+        showAll={showAllEvents}
+        onToggleShowAll={() => setShowAllEvents((v) => !v)}
+      />
     </section>
   );
 }

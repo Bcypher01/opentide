@@ -38,6 +38,7 @@ The app works immediately with **zero keys** — crypto (Binance) and forex (Fra
 | Forex | Frankfurter (ECB reference rates, no key) | Daily — the UI labels this honestly |
 | Stocks | Finnhub free tier | ~Real-time US quotes, cached 60s |
 | News | RSS: CoinDesk, Cointelegraph, CNBC Markets, MarketWatch, FXStreet (no keys, parsed dependency-free, cached 10 min) | ~Real-time |
+| Economic calendar | ForexFactory widget feed (unofficial, no key, cached 1h) + static FOMC/CPI/NFP/PPI anchors from federalreserve.gov & bls.gov (regenerated yearly) | 2-week window + year-ahead anchors |
 | Charts | TradingView free embed widget | Real-time |
 
 API keys live server-side only (route handlers). Next.js fetch caching deduplicates upstream calls, so 1,000 visitors cost the same upstream quota as one.
@@ -67,8 +68,8 @@ Calm intensity: dark-first (`#0A0B0D`), the teal accent `#00D4AA` is reserved fo
 
 ## Roadmap
 
-- **Done** — news engine (RSS, tagged by asset), top movers, TradingView charts, news-driven chart suggestions, ticker tape, market pulse strip (crypto + stocks Fear & Greed, BTC dominance, DXY, US yields), derivatives pulse (funding extremes, open interest), "while you were away" return-visit diff
-- **Next** — economic calendar (Finnhub free endpoint), Marketaux as a second news source, session alerts/push, accounts + sync
+- **Done** — news engine (RSS, tagged by asset), top movers, TradingView charts, news-driven chart suggestions, ticker tape, market pulse strip (crypto + stocks Fear & Greed, BTC dominance, DXY, US yields), derivatives pulse (funding extremes, open interest), "while you were away" return-visit diff, economic calendar on the session clock (timeline markers, countdown chips, beginner explainers), daily briefing ("your day in 60 seconds")
+- **Next** — watchlist daily digest (gated on briefing engagement; see PHASE2.md), then Marketaux as a second news source, session alerts/push, accounts + sync
 
 ---
 
