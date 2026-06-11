@@ -28,19 +28,26 @@ export interface NewsItem {
   ts: number;
 }
 
-function decodeEntities(s: string): string {
+/** Numeric entities, hex (&#x2019;) and decimal (&#8217;) — covers smart
+ *  quotes, dashes and anything else feeds throw at us. */
+function decodeNumeric(s: string): string {
   return s
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&#8217;/g, "'")
-    .replace(/&#8216;/g, "'")
-    .replace(/&#8220;|&#8221;/g, '"')
-    .replace(/&#8211;|&#8212;/g, "—")
-    .replace(/&nbsp;/g, " ");
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)));
+}
+
+function decodeEntities(s: string): string {
+  // Run the numeric pass twice: RSS titles are frequently double-encoded
+  // (&amp;#x2019;), so numeric entities only appear after &amp; is decoded.
+  return decodeNumeric(
+    decodeNumeric(s)
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+  );
 }
 
 function clean(s: string): string {
