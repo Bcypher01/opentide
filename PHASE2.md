@@ -1,6 +1,11 @@
 # Phase 2 — The Morning Ritual
 
 > **Status (2026-06-11):** Steps 1 & 2 shipped — `/api/calendar` (ForexFactory + static `us-macro-schedule.json` anchors), markers/countdowns/explainers on the session clock, and the daily briefing card. Step 3 (watchlist digest) remains gated on briefing engagement.
+>
+> **Also shipped 2026-06-11:**
+> - **Briefing engagement counter** — the Step 3 gate is now measurable. Per-day read/reopen counts persist in `localStorage` (`briefingStats`, capped to 60 days); a trailing-14-day readout ("read N/14d, M reopens") shows in the briefing card footer. Decision rule: dogfood ~2 weeks, build the digest only if the read-rate holds.
+> - **Onboarding tour** (`AboutModal`, "What is Opentide") — six-slide framer-motion modal with per-feature "where to find it" pins. Auto-opens once for first-time visitors; afterwards reachable via the header `?` or the intro hero. Phase-3-spirited (new-visitor conversion), not part of the ritual itself.
+> - A reminder is scheduled (Dec 1, 2026) to regenerate `us-macro-schedule.json` with 2027 Fed/BLS dates.
 
 Phase 1 is fully shipped (#4 while-you-were-away, #3 sentiment strip crypto + stocks, #9 yield panel, #6 funding rates). Phase 2 assembles the morning ritual: **#2 economic calendar → #1 daily briefing → #12 watchlist digest**, in that order, because the briefing consumes the calendar and the digest consumes both.
 

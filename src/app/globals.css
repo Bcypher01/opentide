@@ -114,6 +114,11 @@ body {
 .marquee-track {
   animation: marquee 60s linear infinite;
 }
+
+/* While the tour modal is open, stop the ticker repainting underneath it */
+body.tour-open .marquee-track {
+  animation-play-state: paused;
+}
 .marquee:hover .marquee-track {
   animation-play-state: paused;
 }

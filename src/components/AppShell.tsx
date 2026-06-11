@@ -6,7 +6,9 @@ import { useEffect, useState } from "react";
 import { useNow } from "@/lib/hooks";
 import { sessionGreeting } from "@/lib/sessions";
 import { useStore } from "@/lib/store";
+import AboutModal from "./AboutModal";
 import ChartModal from "./ChartModal";
+import { IconHelp } from "./Icons";
 import Logo, { Wordmark } from "./Logo";
 
 const NAV = [
@@ -26,7 +28,13 @@ export default function AppShell({
   useEffect(() => setMounted(true), []);
   const pathname = usePathname();
   const now = useNow(1000);
-  const { useUTC, toggleUTC } = useStore();
+  const { useUTC, toggleUTC, openAbout, aboutSeen } = useStore();
+
+  // First visit ever: open the tour once (after mount, so the persisted
+  // aboutSeen flag has hydrated). openAbout marks it seen, so never again.
+  useEffect(() => {
+    if (mounted && !aboutSeen) openAbout();
+  }, [mounted, aboutSeen, openAbout]);
 
   return (
     <div className="bg-glow flex min-h-screen flex-col">
@@ -77,6 +85,20 @@ export default function AppShell({
                       second: "2-digit",
                     })}
               </button>
+              <button
+                onClick={openAbout}
+                title="What is Opentide? Take the 60-second tour"
+                aria-label="About Opentide"
+                className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:text-text"
+              >
+                <IconHelp size={16} />
+                {!aboutSeen && (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent"
+                    aria-hidden="true"
+                  />
+                )}
+              </button>
             </>
           )}
         </div>
@@ -85,6 +107,7 @@ export default function AppShell({
       <main className="mx-auto w-full max-w-[1700px] flex-1 px-4 pb-10 pt-4 lg:px-6">{children}</main>
 
       {mounted && <ChartModal />}
+      {mounted && <AboutModal />}
 
       <footer className="mx-auto w-full max-w-[1700px] px-4 pb-8 text-center text-xs text-muted/60 lg:px-6">
         Data: Binance · Frankfurter (ECB) · Finnhub · CoinGecko · Yahoo · CoinDesk · Cointelegraph
