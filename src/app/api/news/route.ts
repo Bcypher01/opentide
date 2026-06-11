@@ -12,7 +12,11 @@ const FEEDS: Array<{ url: string; source: string; market: Market }> = [
   { url: "https://cointelegraph.com/rss", source: "Cointelegraph", market: "crypto" },
   { url: "https://www.cnbc.com/id/20910258/device/rss/rss.html", source: "CNBC Markets", market: "stocks" },
   { url: "https://feeds.content.dowjones.io/public/rss/mw_topstories", source: "MarketWatch", market: "stocks" },
+  // Forex: multiple sources because FXStreet's WAF often rejects datacenter
+  // IPs (e.g. Vercel), which would otherwise leave the forex tab empty.
   { url: "https://www.fxstreet.com/rss/news", source: "FXStreet", market: "forex" },
+  { url: "https://investinglive.com/feed/news", source: "investingLive", market: "forex" },
+  { url: "https://www.cnbc.com/id/10000664/device/rss/rss.html", source: "CNBC FX", market: "forex" },
 ];
 
 export interface NewsItem {
@@ -80,7 +84,12 @@ export async function GET() {
     FEEDS.map(async (f) => {
       const res = await fetch(f.url, {
         next: { revalidate: 600 },
-        headers: { "user-agent": "Mozilla/5.0 (compatible; Opentide/1.0)" },
+        headers: {
+          // Real browser UA — WAFs (FXStreet et al.) block obvious bot strings
+          "user-agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+          accept: "application/rss+xml, application/xml, text/xml, */*",
+        },
       });
       if (!res.ok) throw new Error(`${f.source} ${res.status}`);
       return parseFeed(await res.text(), f.source, f.market);
