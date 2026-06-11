@@ -141,10 +141,12 @@ export default function Dashboard() {
 
       {/* Main 3-column shell: markets | chart | news */}
       <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-12">
-        {/* LEFT — watchlist + one scrollable markets card */}
-        <div className="space-y-5 lg:col-span-4 xl:col-span-3">
+        {/* LEFT — watchlist + one scrollable markets card. On lg+ the column is
+            pinned to the chart card's height and the markets list flex-fills
+            the remainder, so it never extends past the chart. */}
+        <div className="flex flex-col gap-5 lg:col-span-4 lg:h-[604px] xl:col-span-3">
           {/* Watchlist */}
-          <section className="rounded-2xl border border-border bg-surface p-2">
+          <section className="shrink-0 rounded-2xl border border-border bg-surface p-2">
             <h2 className="px-3 pb-1 pt-2 text-xs font-medium uppercase tracking-wider text-muted">
               Watchlist
             </h2>
@@ -181,9 +183,9 @@ export default function Dashboard() {
             )}
           </section>
 
-          {/* Markets — single card, fixed height, scrollable */}
-          <section className="rounded-2xl border border-border bg-surface">
-            <div className="border-b border-border p-3">
+          {/* Markets — single card, scrollable; fills leftover column height on lg+ */}
+          <section className="rounded-2xl border border-border bg-surface lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
+            <div className="shrink-0 border-b border-border p-3">
               <nav className="flex flex-wrap items-center gap-2" aria-label="Market filter">
                 {(["all", "forex", "crypto", "stocks"] as const).map((m) => (
                   <button
@@ -209,7 +211,7 @@ export default function Dashboard() {
               </nav>
             </div>
 
-            <div className="max-h-[560px] overflow-y-auto p-2">
+            <div className="max-h-[560px] overflow-y-auto p-2 lg:max-h-none lg:min-h-0 lg:flex-1">
               {(["crypto", "forex", "stocks"] as Market[]).map((m) => {
                 const assets = byMarket[m];
                 if (assets.length === 0) return null;
