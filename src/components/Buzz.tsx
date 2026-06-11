@@ -1,9 +1,21 @@
 "use client";
 
-import { usePolling } from "@/lib/hooks";
+import { useState } from "react";
+import { useNow, usePolling } from "@/lib/hooks";
 import { formatCalendarDate, formatChangePct } from "@/lib/format";
 import type { BuzzCoin, BuzzIpo } from "@/app/api/buzz/route";
-import { IconBell, IconFlame, IconTrendingUp } from "./Icons";
+import type { CalendarEvent, CalendarPayload } from "@/app/api/calendar/route";
+import {
+  IMPACT_COLOR,
+  eventCountdown,
+  explainEvent,
+  forecastLine,
+  formatEventDay,
+  formatEventTime,
+  nextHighImpact,
+} from "@/lib/calendar";
+import { formatCountdown } from "@/lib/sessions";
+import { IconBell, IconCalendar, IconFlame, IconTrendingUp } from "./Icons";
 
 interface BuzzPayload {
   coins: BuzzCoin[];
@@ -119,6 +131,112 @@ export function HotStocksPanel({ onSelect }: Props) {
             </button>
           ))}
         </div>
+      )}
+    </Panel>
+  );
+}
+
+/**
+ * Scheduled event risk — the next high-impact economic releases, with the
+ * same tap-to-learn explainers as the dashboard clock. Attention tells you
+ * *where* volatility may show up; the calendar tells you *when*.
+ */
+export function EventRiskPanel() {
+  const { data } = usePolling<CalendarPayload>("/api/calendar", 1_800_000);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const now = useNow(30_000).getTime(); // countdowns refresh every 30s
+
+  const upcoming: CalendarEvent[] = data?.events
+    ? nextHighImpact(data.events, now, 6)
+    : [];
+  const anchorsFallback = !data?.events
+    ? (data?.anchors ?? []).filter((a) => a.ts > now).sort((a, b) => a.ts - b.ts)
+    : [];
+
+  return (
+    <Panel
+      icon={<IconCalendar size={15} />}
+      title="Event risk"
+      sub="high impact · ForexFactory"
+    >
+      {!data ? (
+        <Skeletons />
+      ) : upcoming.length === 0 && anchorsFallback.length === 0 ? (
+        <p className="text-xs text-muted">
+          No high-impact releases on the radar — calm waters (scheduled ones,
+          anyway).
+        </p>
+      ) : upcoming.length > 0 ? (
+        <ul className="space-y-1">
+          {upcoming.map((e) => {
+            const isOpen = openId === e.id;
+            const ex = isOpen ? explainEvent(e) : null;
+            const fc = isOpen ? forecastLine(e) : null;
+            return (
+              <li key={e.id}>
+                <button
+                  onClick={() => setOpenId(isOpen ? null : e.id)}
+                  aria-expanded={isOpen}
+                  title="What is this release?"
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors ${
+                    isOpen ? "bg-surface2" : "hover:bg-surface2"
+                  }`}
+                >
+                  <span
+                    aria-hidden
+                    className="h-2 w-2 shrink-0 rotate-45 rounded-[2px]"
+                    style={{ backgroundColor: IMPACT_COLOR[e.impact] }}
+                  />
+                  <span className="w-9 shrink-0 text-xs font-medium text-muted">
+                    {e.country}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm">{e.title}</span>
+                  <span className="num hidden text-[10px] text-muted/70 sm:inline">
+                    {formatEventDay(e.ts, now)} {formatEventTime(e.ts, false)}
+                  </span>
+                  <span className="num shrink-0 text-xs text-accent">
+                    {eventCountdown(e.ts, now)}
+                  </span>
+                </button>
+                {isOpen && ex && (
+                  <div className="mx-2 mb-1 rounded-lg border border-accent/25 bg-surface2/60 p-2.5 text-xs leading-relaxed">
+                    <p className="text-text/90">
+                      <span className="font-medium text-muted">What it is — </span>
+                      {ex.what}
+                    </p>
+                    <p className="mt-1 text-text/90">
+                      <span className="font-medium text-muted">Why it matters — </span>
+                      {ex.why}
+                    </p>
+                    {fc && <p className="num mt-1 text-muted">{fc}</p>}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <ul className="space-y-1">
+          {anchorsFallback.map((a) => (
+            <li
+              key={a.kind}
+              className="flex items-center gap-2.5 rounded-lg px-2 py-1.5"
+            >
+              <span
+                aria-hidden
+                className="h-2 w-2 shrink-0 rotate-45 rounded-[2px]"
+                style={{ backgroundColor: IMPACT_COLOR.High }}
+              />
+              <span className="min-w-0 flex-1 truncate text-sm">{a.title}</span>
+              <span className="num shrink-0 text-xs text-accent">
+                in {formatCountdown(a.ts - now)}
+              </span>
+            </li>
+          ))}
+          <li className="px-2 pt-1 text-[10px] text-muted/60">
+            Live feed unreachable — showing the official published schedule.
+          </li>
+        </ul>
       )}
     </Panel>
   );

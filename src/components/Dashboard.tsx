@@ -9,6 +9,7 @@ import {
   type AssetDef,
   type Market,
 } from "@/lib/assets";
+import type { CalendarPayload } from "@/app/api/calendar/route";
 import type { DerivsPayload } from "@/app/api/derivs/route";
 import type { PulsePayload } from "@/app/api/pulse/route";
 import { timeAgo } from "@/lib/format";
@@ -18,6 +19,7 @@ import { getAllSessionStates } from "@/lib/sessions";
 import { useStore } from "@/lib/store";
 import AppShell from "./AppShell";
 import ChartPanel from "./ChartPanel";
+import DailyBriefing from "./DailyBriefing";
 import DashboardSkeleton from "./DashboardSkeleton";
 import DerivsPanel from "./DerivsPanel";
 import Hero from "./Hero";
@@ -65,6 +67,7 @@ export default function Dashboard() {
   const news = usePolling<NewsPayload>("/api/news", 300_000);
   const pulse = usePolling<PulsePayload>("/api/pulse", 600_000);
   const derivs = usePolling<DerivsPayload>("/api/derivs", 300_000);
+  const calendar = usePolling<CalendarPayload>("/api/calendar", 1_800_000);
   const live = useBinanceLive();
   const openChart = useOpenChart();
 
@@ -139,10 +142,22 @@ export default function Dashboard() {
         <WelcomeBack diff={awayDiff} onDismiss={dismissAway} onSelect={openChart} />
       )}
 
+      {/* Daily briefing: first visit of the local day, collapses after read */}
+      <DailyBriefing
+        now={now}
+        states={states}
+        pulse={pulse.data}
+        quoteOf={quoteOf}
+        derivs={derivs.data}
+        calendar={calendar.data}
+        news={news.data?.items ?? []}
+        onSelectAsset={openChart}
+      />
+
       {/* Market pulse: sentiment + macro strip */}
       <PulseStrip data={pulse.data} />
 
-      {/* Session clock */}
+      {/* Session clock — with economic calendar markers + countdowns */}
       <div className="mt-4">
         <SessionClock
           now={now}
@@ -150,6 +165,7 @@ export default function Dashboard() {
           useUTC={useUTC}
           selected={sessionFilter}
           onSelect={setSessionFilter}
+          calendar={calendar.data}
         />
       </div>
 
