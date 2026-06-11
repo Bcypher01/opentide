@@ -9,20 +9,25 @@ import {
   type AssetDef,
   type Market,
 } from "@/lib/assets";
+import type { DerivsPayload } from "@/app/api/derivs/route";
+import type { PulsePayload } from "@/app/api/pulse/route";
 import { timeAgo } from "@/lib/format";
-import { useBinanceLive, useNow, usePolling } from "@/lib/hooks";
+import { useAwayDiff, useBinanceLive, useNow, usePolling } from "@/lib/hooks";
 import { useOpenChart } from "@/lib/nav";
 import { getAllSessionStates } from "@/lib/sessions";
 import { useStore } from "@/lib/store";
 import AppShell from "./AppShell";
 import ChartPanel from "./ChartPanel";
 import DashboardSkeleton from "./DashboardSkeleton";
+import DerivsPanel from "./DerivsPanel";
 import Hero from "./Hero";
 import Movers from "./Movers";
 import NewsFeed, { type NewsItem } from "./NewsFeed";
 import PriceRow from "./PriceRow";
+import PulseStrip from "./PulseStrip";
 import SessionClock from "./SessionClock";
 import Ticker from "./Ticker";
+import WelcomeBack from "./WelcomeBack";
 
 interface Quote {
   symbol: string;
@@ -58,6 +63,8 @@ export default function Dashboard() {
   const forex = usePolling<ApiPayload>("/api/forex", 300_000);
   const stocks = usePolling<ApiPayload>("/api/stocks", 60_000);
   const news = usePolling<NewsPayload>("/api/news", 300_000);
+  const pulse = usePolling<PulsePayload>("/api/pulse", 600_000);
+  const derivs = usePolling<DerivsPayload>("/api/derivs", 300_000);
   const live = useBinanceLive();
   const openChart = useOpenChart();
 
@@ -104,6 +111,8 @@ export default function Dashboard() {
     .map((id) => ASSET_BY_ID[id])
     .filter((a): a is AssetDef => Boolean(a));
 
+  const { diff: awayDiff, dismiss: dismissAway } = useAwayDiff(quoteOf, watchlist);
+
   if (!mounted) {
     return (
       <AppShell>
@@ -125,6 +134,14 @@ export default function Dashboard() {
       {/* First-visit story */}
       {!heroDismissed && <Hero onDismiss={dismissHero} />}
 
+      {/* Return visit: what moved while you were away */}
+      {awayDiff && (
+        <WelcomeBack diff={awayDiff} onDismiss={dismissAway} onSelect={openChart} />
+      )}
+
+      {/* Market pulse: sentiment + macro strip */}
+      <PulseStrip data={pulse.data} />
+
       {/* Session clock */}
       <div className="mt-4">
         <SessionClock
@@ -138,6 +155,9 @@ export default function Dashboard() {
 
       {/* Top movers */}
       <Movers quoteOf={quoteOf} onSelect={openChart} />
+
+      {/* Derivatives pulse: funding extremes + open interest */}
+      <DerivsPanel data={derivs.data} onSelect={openChart} />
 
       {/* Main 3-column shell: markets | chart | news */}
       <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-12">

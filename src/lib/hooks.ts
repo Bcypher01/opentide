@@ -131,3 +131,97 @@ export function useNow(ms = 1000): Date {
   }, [ms]);
   return now;
 }
+
+// ---------------------------------------------------------------------------
+// useAwayDiff — "while you were away". Snapshots current prices to
+// localStorage every minute; on a return visit (>30 min gap) computes what
+// moved since the trader last looked. Zero APIs, zero accounts.
+// ---------------------------------------------------------------------------
+const AWAY_KEY = "opentide:lastVisit";
+const AWAY_MIN_GAP_MS = 30 * 60 * 1000;
+/** Assets ranked first when the watchlist is empty. */
+const AWAY_DEFAULTS = [
+  "crypto:BTC",
+  "crypto:ETH",
+  "forex:EUR/USD",
+  "stocks:NVDA",
+  "stocks:AAPL",
+  "stocks:TSLA",
+];
+
+interface AwaySnapshot {
+  ts: number;
+  prices: Record<string, number>; // asset id -> price
+}
+
+export interface AwayMove {
+  id: string;
+  pct: number;
+}
+
+export interface AwayDiff {
+  awayMs: number;
+  moves: AwayMove[]; // sorted by |pct| desc
+}
+
+export function useAwayDiff(
+  quoteOf: Record<string, { price: number }>,
+  watchlist: string[]
+): { diff: AwayDiff | null; dismiss: () => void } {
+  const [diff, setDiff] = useState<AwayDiff | null>(null);
+  const computedRef = useRef(false);
+  const snapshotRef = useRef<AwaySnapshot | null>(null);
+
+  // Read the previous visit exactly once, before we start overwriting it.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(AWAY_KEY);
+      if (raw) snapshotRef.current = JSON.parse(raw) as AwaySnapshot;
+    } catch {
+      snapshotRef.current = null;
+    }
+  }, []);
+
+  // Compute the diff once, as soon as enough fresh quotes have arrived.
+  useEffect(() => {
+    if (computedRef.current) return;
+    const ids = Object.keys(quoteOf);
+    if (ids.length < 5) return; // wait for real data
+    computedRef.current = true;
+
+    const snap = snapshotRef.current;
+    if (!snap || Date.now() - snap.ts < AWAY_MIN_GAP_MS) return;
+
+    const candidates = watchlist.length > 0 ? watchlist : AWAY_DEFAULTS;
+    const moves: AwayMove[] = [];
+    for (const id of candidates) {
+      const from = snap.prices[id];
+      const to = quoteOf[id]?.price;
+      if (!from || !to || from <= 0) continue;
+      const pct = ((to - from) / from) * 100;
+      if (Math.abs(pct) >= 0.05) moves.push({ id, pct });
+    }
+    moves.sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct));
+    if (moves.length > 0)
+      setDiff({ awayMs: Date.now() - snap.ts, moves: moves.slice(0, 4) });
+  }, [quoteOf, watchlist]);
+
+  // Keep the snapshot fresh (throttled — at most once a minute).
+  const lastWriteRef = useRef(0);
+  useEffect(() => {
+    const nowTs = Date.now();
+    if (nowTs - lastWriteRef.current < 60_000) return;
+    const ids = Object.keys(quoteOf);
+    if (ids.length < 5) return;
+    lastWriteRef.current = nowTs;
+    try {
+      const prices: Record<string, number> = {};
+      for (const id of ids) prices[id] = quoteOf[id].price;
+      localStorage.setItem(AWAY_KEY, JSON.stringify({ ts: nowTs, prices }));
+    } catch {
+      /* storage full / private mode — fine */
+    }
+  }, [quoteOf]);
+
+  return { diff, dismiss: () => setDiff(null) };
+}
