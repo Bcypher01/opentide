@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
-// Market Pulse — one cached call composing four free, keyless sources:
+// Market Pulse — one cached call composing five free, keyless sources:
 //   · Crypto Fear & Greed       alternative.me        (revalidate 1h)
+//   · Stocks Fear & Greed       CNN dataviz (unofficial) (revalidate 1h)
 //   · BTC dominance + mcap Δ    CoinGecko /global     (revalidate 10m)
 //   · US 2Y/10Y yields          treasury.gov CSV      (revalidate 1h)
 //   · DXY approximation         Frankfurter (ECB)     (revalidate 30m, daily data)
@@ -13,6 +14,12 @@ export interface PulsePayload {
     value: number;
     classification: string;
     yesterday: number | null;
+  } | null;
+  stockFearGreed: {
+    value: number;
+    classification: string;
+    previousClose: number | null;
+    asOf: string;
   } | null;
   btcDominance: number | null;
   mcapChangePct: number | null;
@@ -41,6 +48,50 @@ async function fearGreed(): Promise<PulsePayload["fearGreed"]> {
       value: parseInt(today.value, 10),
       classification: today.value_classification,
       yesterday: prev ? parseInt(prev.value, 10) : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// CNN's Fear & Greed index for US equities. The endpoint is unofficial (it
+// powers cnn.com/markets/fear-and-greed) and rejects default fetch UAs, so we
+// send a browser-ish User-Agent. If CNN ever blocks it the chip just hides.
+async function stockFearGreed(): Promise<PulsePayload["stockFearGreed"]> {
+  try {
+    const res = await fetch(
+      "https://production.dataviz.cnn.io/index/fearandgreed/graphdata",
+      {
+        next: { revalidate: 3600 },
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+          Accept: "application/json",
+        },
+      }
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      fear_and_greed?: {
+        score?: number;
+        rating?: string;
+        previous_close?: number;
+        timestamp?: string;
+      };
+    };
+    const fg = json.fear_and_greed;
+    if (!fg || !Number.isFinite(fg.score)) return null;
+    return {
+      value: Math.round(fg.score as number),
+      // "extreme fear" → "Extreme Fear", matching alternative.me's casing.
+      classification: (fg.rating ?? "")
+        .split(" ")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" "),
+      previousClose: Number.isFinite(fg.previous_close)
+        ? Math.round(fg.previous_close as number)
+        : null,
+      asOf: fg.timestamp?.slice(0, 10) ?? "",
     };
   } catch {
     return null;
@@ -168,8 +219,9 @@ async function dxy(): Promise<PulsePayload["dxy"]> {
 }
 
 export async function GET() {
-  const [fg, cg, ty, dx] = await Promise.all([
+  const [fg, sfg, cg, ty, dx] = await Promise.all([
     fearGreed(),
+    stockFearGreed(),
     coingeckoGlobal(),
     treasuryYields(),
     dxy(),
@@ -177,6 +229,7 @@ export async function GET() {
 
   const payload: PulsePayload = {
     fearGreed: fg,
+    stockFearGreed: sfg,
     btcDominance: cg.btcDominance,
     mcapChangePct: cg.mcapChangePct,
     yields: ty,

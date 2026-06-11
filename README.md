@@ -67,7 +67,7 @@ Calm intensity: dark-first (`#0A0B0D`), the teal accent `#00D4AA` is reserved fo
 
 ## Roadmap
 
-- **Done** — news engine (RSS, tagged by asset), top movers, TradingView charts, news-driven chart suggestions, ticker tape, market pulse strip (Fear & Greed, BTC dominance, DXY, US yields), derivatives pulse (funding extremes, open interest), "while you were away" return-visit diff
+- **Done** — news engine (RSS, tagged by asset), top movers, TradingView charts, news-driven chart suggestions, ticker tape, market pulse strip (crypto + stocks Fear & Greed, BTC dominance, DXY, US yields), derivatives pulse (funding extremes, open interest), "while you were away" return-visit diff
 - **Next** — economic calendar (Finnhub free endpoint), Marketaux as a second news source, session alerts/push, accounts + sync
 
 ---
