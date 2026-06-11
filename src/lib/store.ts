@@ -27,9 +27,24 @@ interface OpentideState {
   heroDismissed: boolean;
   dismissHero: () => void;
 
+  /** "What is Opentide" tour modal — opt-in, never auto-opened */
+  aboutOpen: boolean;
+  openAbout: () => void;
+  closeAbout: () => void;
+  /** persisted: has the user ever opened the tour? drives the header hint dot */
+  aboutSeen: boolean;
+
   /** local date (YYYY-MM-DD) the daily briefing was last collapsed/read */
   briefingReadDate: string | null;
   setBriefingReadDate: (d: string | null) => void;
+
+  /**
+   * Per-day briefing engagement, e.g. { "2026-06-11": { read: 1, reopen: 2 } }.
+   * Kept to the last 60 days. Gates the watchlist-digest step on the roadmap:
+   * if we aren't reading the briefing ourselves, don't build more into it.
+   */
+  briefingStats: Record<string, { read: number; reopen: number }>;
+  trackBriefing: (date: string, ev: "read" | "reopen") => void;
 
   useUTC: boolean;
   toggleUTC: () => void;
@@ -63,8 +78,27 @@ export const useStore = create<OpentideState>()(
       heroDismissed: false,
       dismissHero: () => set({ heroDismissed: true }),
 
+      aboutOpen: false,
+      openAbout: () => set({ aboutOpen: true, aboutSeen: true }),
+      closeAbout: () => set({ aboutOpen: false }),
+      aboutSeen: false,
+
       briefingReadDate: null,
       setBriefingReadDate: (d) => set({ briefingReadDate: d }),
+
+      briefingStats: {},
+      trackBriefing: (date, ev) =>
+        set((s) => {
+          const day = s.briefingStats[date] ?? { read: 0, reopen: 0 };
+          const next = {
+            ...s.briefingStats,
+            [date]: { ...day, [ev]: day[ev] + 1 },
+          };
+          // YYYY-MM-DD sorts chronologically as strings; drop oldest past 60
+          const keys = Object.keys(next).sort();
+          while (keys.length > 60) delete next[keys.shift()!];
+          return { briefingStats: next };
+        }),
 
       useUTC: false,
       toggleUTC: () => set((s) => ({ useUTC: !s.useUTC })),
@@ -75,7 +109,9 @@ export const useStore = create<OpentideState>()(
         watchlist: s.watchlist,
         useUTC: s.useUTC,
         heroDismissed: s.heroDismissed,
+        aboutSeen: s.aboutSeen,
         briefingReadDate: s.briefingReadDate,
+        briefingStats: s.briefingStats,
         selectedAsset: s.selectedAsset,
       }),
     }

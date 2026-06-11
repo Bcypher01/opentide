@@ -79,9 +79,24 @@ export default function DailyBriefing({
   news,
   onSelectAsset,
 }: Props) {
-  const { briefingReadDate, setBriefingReadDate, useUTC } = useStore();
+  const { briefingReadDate, setBriefingReadDate, briefingStats, trackBriefing, useUTC } =
+    useStore();
   const today = localDateKey(now);
   const collapsed = briefingReadDate === today;
+
+  // Engagement over the trailing 14 days — the dogfooding gate for building
+  // more into this card. Reads = days "Got it" was clicked at least once.
+  const engagement = useMemo(() => {
+    const since = localDateKey(new Date(now.getTime() - 13 * 864e5));
+    let daysRead = 0;
+    let reopens = 0;
+    for (const [d, s] of Object.entries(briefingStats)) {
+      if (d < since || d > today) continue;
+      if (s.read > 0) daysRead++;
+      reopens += s.reopen;
+    }
+    return { daysRead, reopens };
+  }, [briefingStats, now, today]);
 
   const { lines, summary } = useMemo(
     () =>
@@ -99,7 +114,10 @@ export default function DailyBriefing({
     return (
       <button
         type="button"
-        onClick={() => setBriefingReadDate(null)}
+        onClick={() => {
+          trackBriefing(today, "reopen");
+          setBriefingReadDate(null);
+        }}
         aria-label="Reopen daily briefing"
         className="group mt-4 flex w-full items-center gap-2.5 rounded-2xl border border-border bg-surface px-4 py-2.5 text-left text-xs transition-colors hover:border-accent/40"
       >
@@ -138,7 +156,10 @@ export default function DailyBriefing({
         </div>
         <button
           type="button"
-          onClick={() => setBriefingReadDate(today)}
+          onClick={() => {
+            trackBriefing(today, "read");
+            setBriefingReadDate(today);
+          }}
           className="ml-auto min-h-[32px] shrink-0 rounded-full border border-border bg-surface2 px-3.5 py-1 text-xs text-muted transition-colors hover:border-accent/40 hover:text-text"
         >
           Got it ✓
@@ -191,6 +212,13 @@ export default function DailyBriefing({
       <p className="relative mt-3 border-t border-border/60 px-2 pt-2.5 text-[11px] text-muted/70">
         Composed from the live data on this page — collapses once read, back fresh
         tomorrow. Educational, not investment advice.
+        {(engagement.daysRead > 0 || engagement.reopens > 0) && (
+          <span className="num">
+            {" · read "}
+            {engagement.daysRead}/14d
+            {engagement.reopens > 0 && `, ${engagement.reopens} reopens`}
+          </span>
+        )}
       </p>
     </section>
   );

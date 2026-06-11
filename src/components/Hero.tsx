@@ -1,5 +1,6 @@
 "use client";
 
+import { useStore } from "@/lib/store";
 import { IconCandles, IconClock, IconZap } from "./Icons";
 
 interface Props {
@@ -25,6 +26,7 @@ const STEPS = [
 ];
 
 export default function Hero({ onDismiss }: Props) {
+  const openAbout = useStore((s) => s.openAbout);
   return (
     <section
       className="relative mt-4 overflow-hidden rounded-2xl border border-border bg-surface"
@@ -57,12 +59,20 @@ export default function Hero({ onDismiss }: Props) {
           ))}
         </div>
 
-        <button
-          onClick={onDismiss}
-          className="mt-6 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-bg transition-opacity hover:opacity-90"
-        >
-          Show me the markets →
-        </button>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <button
+            onClick={onDismiss}
+            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-bg transition-opacity hover:opacity-90"
+          >
+            Show me the markets →
+          </button>
+          <button
+            onClick={openAbout}
+            className="rounded-lg border border-border bg-surface2 px-5 py-2.5 text-sm text-muted transition-colors hover:border-accent/40 hover:text-text"
+          >
+            Take the 60-second tour
+          </button>
+        </div>
       </div>
     </section>
   );

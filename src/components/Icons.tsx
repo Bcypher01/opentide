@@ -119,6 +119,21 @@ export const IconSun = (p: IconProps) => (
   </Base>
 );
 
+export const IconPin = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+    <circle cx="12" cy="10" r="3" />
+  </Base>
+);
+
+export const IconHelp = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+    <path d="M12 17h.01" />
+  </Base>
+);
+
 export const IconArrowUpRight = (p: IconProps) => (
   <Base {...p}>
     <path d="M7 17 17 7" />
