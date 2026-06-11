@@ -115,8 +115,15 @@ export default function PulseStrip({ data }: Props) {
   }, [openKey]);
 
   if (!data) return null;
-  const { fearGreed: fg, btcDominance, mcapChangePct, dxy, yields } = data;
-  if (!fg && btcDominance === null && !dxy && !yields) return null;
+  const {
+    fearGreed: fg,
+    stockFearGreed: sfg,
+    btcDominance,
+    mcapChangePct,
+    dxy,
+    yields,
+  } = data;
+  if (!fg && !sfg && btcDominance === null && !dxy && !yields) return null;
 
   const fgDelta = fg && fg.yesterday !== null ? fg.value - fg.yesterday : null;
 
@@ -125,7 +132,7 @@ export default function PulseStrip({ data }: Props) {
   if (fg) {
     chips.push({
       key: "fg",
-      label: "Fear & Greed",
+      label: "Crypto Fear & Greed",
       value: (
         <>
           <span className={fgColor(fg.value)}>{fg.value}</span>
@@ -149,6 +156,39 @@ export default function PulseStrip({ data }: Props) {
         what: "A 0–100 mood meter for the crypto market. Below 25 is “extreme fear”, above 75 is “extreme greed”.",
         why: "Sentiment often swings to extremes near turning points — deep fear can mark a bottom, euphoric greed a top. It's a gut-check, not a buy/sell signal.",
         source: "alternative.me",
+      },
+    });
+  }
+
+  if (sfg) {
+    const sfgDelta =
+      sfg.previousClose !== null ? sfg.value - sfg.previousClose : null;
+    chips.push({
+      key: "sfg",
+      label: "Stocks Fear & Greed",
+      value: (
+        <>
+          <span className={fgColor(sfg.value)}>{sfg.value}</span>
+          <span className="ml-1.5 text-muted">{sfg.classification}</span>
+        </>
+      ),
+      sub:
+        sfgDelta === null
+          ? undefined
+          : `${sfgDelta > 0 ? "▲" : sfgDelta < 0 ? "▼" : "·"} ${Math.abs(sfgDelta)} vs yda`,
+      subClass:
+        sfgDelta === null
+          ? undefined
+          : sfgDelta > 0
+            ? "text-bull"
+            : sfgDelta < 0
+              ? "text-bear"
+              : "text-muted",
+      explainer: {
+        title: "the Stock Market Fear & Greed Index",
+        what: "CNN's 0–100 mood meter for the US stock market, blending seven signals like momentum, volatility (VIX) and safe-haven demand. Below 25 is “extreme fear”, above 75 is “extreme greed”.",
+        why: "Stocks and crypto increasingly move together. Comparing the two meters shows whether sentiment is market-wide or specific to crypto — a divergence is itself a signal.",
+        source: `CNN Business · as of ${sfg.asOf}`,
       },
     });
   }
