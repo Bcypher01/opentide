@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ASSET_BY_ID, type Market } from "@/lib/assets";
 import { timeAgo } from "@/lib/format";
+import { NewsItemSkeleton } from "./DashboardSkeleton";
 
 export interface NewsItem {
   title: string;
@@ -74,12 +75,12 @@ export default function NewsFeed({
 
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {loading && items.length === 0 && (
-          <div className="space-y-3 p-2">
+          <div>
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="space-y-1.5">
-                <div className="skeleton h-3.5 w-full" />
-                <div className="skeleton h-3.5 w-2/3" />
-              </div>
+              <NewsItemSkeleton
+                key={i}
+                titleWidth={["w-2/3", "w-5/6", "w-1/2", "w-3/4"][i % 4]}
+              />
             ))}
           </div>
         )}

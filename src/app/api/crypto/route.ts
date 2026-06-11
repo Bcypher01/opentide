@@ -3,6 +3,10 @@ import { CRYPTO_ASSETS } from "@/lib/assets";
 
 // Binance public REST — no key needed, generous limits. One batched call for
 // every symbol; Next's fetch cache shares it across ALL users (revalidate 30s).
+// data-api.binance.vision is Binance's official market-data mirror and is NOT
+// geo-blocked for US IPs — required because Vercel functions run in iad1 (US),
+// where api.binance.com returns 451.
+const HOSTS = ["data-api.binance.vision", "api.binance.com"];
 
 export interface Quote {
   symbol: string;
@@ -13,13 +17,17 @@ export interface Quote {
 
 export async function GET() {
   const symbols = CRYPTO_ASSETS.map((a) => `${a.symbol}USDT`);
-  const url = `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(
+  const query = `/api/v3/ticker/24hr?symbols=${encodeURIComponent(
     JSON.stringify(symbols)
   )}`;
 
   try {
-    const res = await fetch(url, { next: { revalidate: 30 } });
-    if (!res.ok) throw new Error(`binance ${res.status}`);
+    let res: Response | null = null;
+    for (const host of HOSTS) {
+      res = await fetch(`https://${host}${query}`, { next: { revalidate: 30 } });
+      if (res.ok) break;
+    }
+    if (!res || !res.ok) throw new Error(`binance ${res?.status}`);
     const rows = (await res.json()) as Array<{
       symbol: string;
       lastPrice: string;

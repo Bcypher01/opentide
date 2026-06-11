@@ -6,6 +6,7 @@ import { timeAgo } from "@/lib/format";
 import { useNow, usePolling } from "@/lib/hooks";
 import { useOpenChart } from "@/lib/nav";
 import AppShell from "@/components/AppShell";
+import { NewsItemSkeleton } from "@/components/DashboardSkeleton";
 import { IconNews } from "@/components/Icons";
 import type { NewsItem } from "@/components/NewsFeed";
 
@@ -78,12 +79,12 @@ export default function NewsPage() {
           <div className="lg:col-span-9">
             <section className="rounded-2xl border border-border bg-surface p-2">
               {news.data === null && (
-                <div className="space-y-4 p-3">
+                <div className="p-1">
                   {Array.from({ length: 10 }).map((_, i) => (
-                    <div key={i} className="space-y-1.5">
-                      <div className="skeleton h-4 w-full" />
-                      <div className="skeleton h-4 w-2/3" />
-                    </div>
+                    <NewsItemSkeleton
+                      key={i}
+                      titleWidth={["w-2/3", "w-5/6", "w-1/2", "w-3/4"][i % 4]}
+                    />
                   ))}
                 </div>
               )}

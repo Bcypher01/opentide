@@ -16,6 +16,7 @@ import { getAllSessionStates } from "@/lib/sessions";
 import { useStore } from "@/lib/store";
 import AppShell from "./AppShell";
 import ChartPanel from "./ChartPanel";
+import DashboardSkeleton from "./DashboardSkeleton";
 import Hero from "./Hero";
 import Movers from "./Movers";
 import NewsFeed, { type NewsItem } from "./NewsFeed";
@@ -106,11 +107,7 @@ export default function Dashboard() {
   if (!mounted) {
     return (
       <AppShell>
-        <div className="space-y-4">
-          <div className="skeleton h-48 w-full" />
-          <div className="skeleton h-24 w-full" />
-          <div className="skeleton h-96 w-full" />
-        </div>
+        <DashboardSkeleton />
       </AppShell>
     );
   }

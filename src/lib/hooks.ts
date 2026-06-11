@@ -76,7 +76,9 @@ export function useBinanceLive(): Record<string, LiveTick> {
 
     function connect() {
       if (!alive) return;
-      ws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`);
+      // data-stream.binance.vision = official market-data mirror, not geo-blocked
+      // for US visitors (stream.binance.com returns 451 from US IPs).
+      ws = new WebSocket(`wss://data-stream.binance.vision/stream?streams=${streams}`);
       ws.onmessage = (ev) => {
         try {
           const msg = JSON.parse(ev.data as string);

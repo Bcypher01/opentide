@@ -2,6 +2,7 @@
 
 import { ALL_ASSETS, type AssetDef } from "@/lib/assets";
 import { formatChangePct, formatPrice } from "@/lib/format";
+import { MoverCardSkeleton } from "./DashboardSkeleton";
 import { IconTrendingUp } from "./Icons";
 
 interface Quote {
@@ -26,11 +27,19 @@ export default function Movers({ quoteOf, onSelect }: Props) {
 
   if (movers.length === 0) {
     return (
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="skeleton h-[76px]" />
-        ))}
-      </div>
+      <section className="mt-5" aria-label="Top movers">
+        <div className="mb-3 flex items-center gap-3">
+          <h2 className="font-display flex items-center gap-2 text-base font-semibold tracking-tight">
+            <IconTrendingUp size={16} className="text-accent" /> Movers
+          </h2>
+          <span className="text-xs text-muted">biggest moves across all three markets</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <MoverCardSkeleton key={i} />
+          ))}
+        </div>
+      </section>
     );
   }
 
