@@ -13,7 +13,8 @@ import type { CalendarPayload } from "@/app/api/calendar/route";
 import type { DerivsPayload } from "@/app/api/derivs/route";
 import type { PulsePayload } from "@/app/api/pulse/route";
 import { timeAgo } from "@/lib/format";
-import { useAwayDiff, useBinanceLive, useNow, usePolling } from "@/lib/hooks";
+import { useAwayDiff, useBinanceLive, useNow, usePolling, useServiceWorker } from "@/lib/hooks";
+import { cancelAllNotifs, scheduleCalendarAlerts, scheduleSessionAlerts } from "@/lib/notifications";
 import { useOpenChart } from "@/lib/nav";
 import { getAllSessionStates } from "@/lib/sessions";
 import { useStore } from "@/lib/store";
@@ -22,6 +23,7 @@ import ChartPanel from "./ChartPanel";
 import DailyBriefing from "./DailyBriefing";
 import DashboardSkeleton from "./DashboardSkeleton";
 import DerivsPanel from "./DerivsPanel";
+import DigestView from "./DigestView";
 import Hero from "./Hero";
 import Movers from "./Movers";
 import NewsFeed, { type NewsItem } from "./NewsFeed";
@@ -58,6 +60,9 @@ export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // Register service worker (PWA + notification delivery)
+  useServiceWorker();
+
   const now = useNow(1000);
   const states = useMemo(() => getAllSessionStates(now), [now]);
 
@@ -82,7 +87,20 @@ export default function Dashboard() {
     heroDismissed,
     dismissHero,
     useUTC,
+    digestMode,
+    setDigestMode,
+    notifPrefs,
   } = useStore();
+
+  // Re-schedule alerts whenever calendar data or prefs change
+  const calEvents = calendar.data?.events ?? [];
+  useEffect(() => {
+    if (!notifPrefs.enabled) return;
+    cancelAllNotifs();
+    scheduleSessionAlerts(states, notifPrefs);
+    scheduleCalendarAlerts(calEvents, notifPrefs);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notifPrefs, calEvents.length, states]);
 
   // id -> quote, with live WS ticks layered over REST for crypto
   const quoteOf = useMemo(() => {
@@ -131,6 +149,25 @@ export default function Dashboard() {
   };
 
   const selQuote = quoteOf[selectedAsset];
+
+  // Digest (morning) mode — focused view when the user has a watchlist
+  if (digestMode) {
+    return (
+      <AppShell ticker={<Ticker quoteOf={quoteOf} onSelect={openChart} />}>
+        <DigestView
+          watchlist={watchlist}
+          quoteOf={quoteOf}
+          news={news.data?.items ?? []}
+          states={states}
+          calendar={calendar.data}
+          now={now}
+          useUTC={useUTC}
+          onSelectAsset={openChart}
+          onExit={() => setDigestMode(false)}
+        />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell ticker={<Ticker quoteOf={quoteOf} onSelect={openChart} />}>

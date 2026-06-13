@@ -23,16 +23,20 @@ export default function ChartModal() {
   const [interval, setInterval] = useState("60");
   const news = usePolling<NewsPayload>("/api/news", 300_000);
 
-  // ESC to close + scroll lock while open
+  // ESC to close + scroll lock + pause background animation while open
+  // (mirrors AboutModal / the ⌘K palette — the marquee ticker repaints
+  // continuously under the overlay otherwise)
   useEffect(() => {
     if (!modalAsset) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeModal();
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    document.body.classList.add("overlay-open");
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
+      document.body.classList.remove("overlay-open");
     };
   }, [modalAsset, closeModal]);
 

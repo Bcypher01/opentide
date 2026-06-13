@@ -24,6 +24,12 @@ interface OpentideState {
   openModal: (id: string) => void;
   closeModal: () => void;
 
+  /** ⌘K command palette — global, never persisted */
+  paletteOpen: boolean;
+  openPalette: () => void;
+  closePalette: () => void;
+  togglePalette: () => void;
+
   heroDismissed: boolean;
   dismissHero: () => void;
 
@@ -48,6 +54,19 @@ interface OpentideState {
 
   useUTC: boolean;
   toggleUTC: () => void;
+
+  /** Morning digest view mode — collapses dashboard to watchlist-only ritual */
+  digestMode: boolean;
+  setDigestMode: (on: boolean) => void;
+
+  /** Notification preferences */
+  notifPrefs: {
+    enabled: boolean;
+    sessionAlerts: boolean;
+    calendarAlerts: boolean;
+    leadMinutes: number;
+  };
+  setNotifPrefs: (prefs: Partial<OpentideState["notifPrefs"]>) => void;
 }
 
 export const useStore = create<OpentideState>()(
@@ -74,6 +93,11 @@ export const useStore = create<OpentideState>()(
       modalAsset: null,
       openModal: (id) => set({ modalAsset: id }),
       closeModal: () => set({ modalAsset: null }),
+
+      paletteOpen: false,
+      openPalette: () => set({ paletteOpen: true }),
+      closePalette: () => set({ paletteOpen: false }),
+      togglePalette: () => set((s) => ({ paletteOpen: !s.paletteOpen })),
 
       heroDismissed: false,
       dismissHero: () => set({ heroDismissed: true }),
@@ -102,6 +126,18 @@ export const useStore = create<OpentideState>()(
 
       useUTC: false,
       toggleUTC: () => set((s) => ({ useUTC: !s.useUTC })),
+
+      digestMode: false,
+      setDigestMode: (on) => set({ digestMode: on }),
+
+      notifPrefs: {
+        enabled: false,
+        sessionAlerts: true,
+        calendarAlerts: true,
+        leadMinutes: 15,
+      },
+      setNotifPrefs: (prefs) =>
+        set((s) => ({ notifPrefs: { ...s.notifPrefs, ...prefs } })),
     }),
     {
       name: "opentide",
@@ -113,6 +149,7 @@ export const useStore = create<OpentideState>()(
         briefingReadDate: s.briefingReadDate,
         briefingStats: s.briefingStats,
         selectedAsset: s.selectedAsset,
+        notifPrefs: s.notifPrefs,
       }),
     }
   )

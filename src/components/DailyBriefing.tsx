@@ -11,6 +11,7 @@ import {
   IconActivity,
   IconCalendar,
   IconCandles,
+  IconChevronRight,
   IconClock,
   IconNews,
   IconSun,
@@ -79,8 +80,15 @@ export default function DailyBriefing({
   news,
   onSelectAsset,
 }: Props) {
-  const { briefingReadDate, setBriefingReadDate, briefingStats, trackBriefing, useUTC } =
-    useStore();
+  const {
+    briefingReadDate,
+    setBriefingReadDate,
+    briefingStats,
+    trackBriefing,
+    useUTC,
+    watchlist,
+    setDigestMode,
+  } = useStore();
   const today = localDateKey(now);
   const collapsed = briefingReadDate === today;
 
@@ -154,16 +162,28 @@ export default function DailyBriefing({
           </h2>
           <p className="text-[11px] text-muted">{dateLabel}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            trackBriefing(today, "read");
-            setBriefingReadDate(today);
-          }}
-          className="ml-auto min-h-[32px] shrink-0 rounded-full border border-border bg-surface2 px-3.5 py-1 text-xs text-muted transition-colors hover:border-accent/40 hover:text-text"
-        >
-          Got it ✓
-        </button>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {watchlist.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setDigestMode(true)}
+              title="Switch to watchlist digest view"
+              className="flex min-h-[32px] items-center gap-1 rounded-full border border-accent/30 bg-accent/10 px-3.5 py-1 text-xs text-accent transition-colors hover:bg-accent/20"
+            >
+              Digest <IconChevronRight size={12} />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              trackBriefing(today, "read");
+              setBriefingReadDate(today);
+            }}
+            className="min-h-[32px] rounded-full border border-border bg-surface2 px-3.5 py-1 text-xs text-muted transition-colors hover:border-accent/40 hover:text-text"
+          >
+            Got it ✓
+          </button>
+        </div>
       </div>
 
       <div className="relative mt-4 grid gap-x-8 gap-y-1 lg:grid-cols-2">

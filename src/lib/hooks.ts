@@ -225,3 +225,35 @@ export function useAwayDiff(
 
   return { diff, dismiss: () => setDiff(null) };
 }
+
+// ---------------------------------------------------------------------------
+// useServiceWorker — registers /sw.js once on mount.
+// Returns { supported, ready } so consumers can gate push/notification UI.
+// ---------------------------------------------------------------------------
+export function useServiceWorker(): { supported: boolean; ready: boolean } {
+  const [ready, setReady] = useState(false);
+  const supported =
+    typeof navigator !== "undefined" && "serviceWorker" in navigator;
+
+  useEffect(() => {
+    if (!supported) return;
+    navigator.serviceWorker
+      .register("/sw.js", { scope: "/" })
+      .then((reg) => {
+        // Service worker is active (either existing or just installed)
+        const activate = reg.active ?? reg.installing ?? reg.waiting;
+        if (activate?.state === "activated" || reg.active) {
+          setReady(true);
+        } else {
+          activate?.addEventListener("statechange", (e) => {
+            if ((e.target as ServiceWorker).state === "activated") setReady(true);
+          });
+        }
+      })
+      .catch(() => {
+        /* SW registration failed (e.g. HTTP context in dev) — silent */
+      });
+  }, [supported]);
+
+  return { supported, ready };
+}
