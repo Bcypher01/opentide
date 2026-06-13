@@ -140,3 +140,15 @@ export const IconArrowUpRight = (p: IconProps) => (
     <path d="M7 7h10v10" />
   </Base>
 );
+
+export const IconChevronRight = (p: IconProps) => (
+  <Base {...p}>
+    <path d="m9 18 6-6-6-6" />
+  </Base>
+);
+
+export const IconChevronLeft = (p: IconProps) => (
+  <Base {...p}>
+    <path d="m15 18-6-6 6-6" />
+  </Base>
+);

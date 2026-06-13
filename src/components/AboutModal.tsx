@@ -9,6 +9,7 @@ import {
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
+  IconCalendar,
   IconCandles,
   IconClock,
   IconNews,
@@ -112,6 +113,20 @@ const SLIDES: Slide[] = [
     ],
     where:
       "The sun card at the very top of the dashboard. Educational, not investment advice.",
+  },
+  {
+    key: "tools",
+    icon: IconCalendar,
+    kicker: "More tools",
+    title: "Plug Opentide into your workflow",
+    body: "Three free tools to bring market context into the apps you already use.",
+    details: [
+      "Morning digest — star assets, then tap ☀ Morning in the header for a focused ritual view.",
+      "Subscribe to the calendar feed (/api/ics) so session opens + FOMC/CPI/NFP appear in Google Calendar, Apple Calendar or Notion.",
+      "Embed the session clock anywhere with a one-line iframe snippet from /widget.",
+    ],
+    where:
+      "Morning toggle: header (dashboard only, with watchlist). Calendar feed & widget: available right now at the URLs above.",
   },
 ];
 

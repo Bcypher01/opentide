@@ -1,0 +1,144 @@
+// ---------------------------------------------------------------------------
+// notifications.ts — in-tab session and calendar alert scheduling.
+//
+// Strategy: browser Notification API, scheduled via setTimeout when the tab is
+// open. We message the service worker too so it can attempt to fire the
+// notification if the SW is alive (it will be for recently-visited sites).
+// This is entirely $0, no backend, no VAPID keys needed.
+// ---------------------------------------------------------------------------
+
+import type { CalendarEvent } from "@/app/api/calendar/route";
+import type { SessionState } from "./sessions";
+
+export type NotifPrefs = {
+  enabled: boolean;
+  sessionAlerts: boolean;
+  calendarAlerts: boolean;
+  leadMinutes: number;
+};
+
+// Timers currently pending — keyed by a stable tag so we don't double-schedule.
+const pending = new Map<string, ReturnType<typeof setTimeout>>();
+
+/** Request notification permission. Returns the resulting PermissionState. */
+export async function requestNotifPermission(): Promise<NotificationPermission> {
+  if (typeof Notification === "undefined") return "denied";
+  if (Notification.permission === "granted") return "granted";
+  return Notification.requestPermission();
+}
+
+/** Current permission without prompting. */
+export function notifPermission(): NotificationPermission {
+  if (typeof Notification === "undefined") return "denied";
+  return Notification.permission;
+}
+
+/** Show a notification now (or via SW if available). */
+function fire(title: string, body: string, tag: string) {
+  if (typeof Notification === "undefined") return;
+  if (Notification.permission !== "granted") return;
+
+  // Try via SW first (works even if the tab has lost focus)
+  if (navigator.serviceWorker?.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: "SCHEDULE_NOTIF",
+      title,
+      body,
+      fireAt: Date.now(),
+      tag,
+    });
+  } else {
+    // Fallback: direct Notification API
+    new Notification(title, {
+      body,
+      icon: "/icon-192.png",
+      tag,
+    });
+  }
+}
+
+/** Schedule a notification at a future ms epoch. Idempotent per tag. */
+function schedule(title: string, body: string, tag: string, fireAt: number) {
+  if (pending.has(tag)) return; // already scheduled
+  const delay = fireAt - Date.now();
+  if (delay < 0 || delay > 24 * 60 * 60 * 1000) return; // past or >24h out
+
+  // Schedule via SW message (survives tab sleep better)
+  if (navigator.serviceWorker?.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: "SCHEDULE_NOTIF",
+      title,
+      body,
+      fireAt,
+      tag,
+    });
+  }
+
+  // Also schedule via setTimeout as a backup
+  const t = setTimeout(() => {
+    pending.delete(tag);
+    fire(title, body, tag);
+  }, delay);
+  pending.set(tag, t);
+}
+
+/** Cancel all pending timers (call before re-scheduling). */
+export function cancelAllNotifs() {
+  for (const t of pending.values()) clearTimeout(t);
+  pending.clear();
+}
+
+// ---------------------------------------------------------------------------
+// Session open alerts
+// ---------------------------------------------------------------------------
+
+/** Schedule "X session opens in leadMinutes" for each upcoming session open. */
+export function scheduleSessionAlerts(
+  states: SessionState[],
+  prefs: NotifPrefs
+) {
+  if (!prefs.enabled || !prefs.sessionAlerts) return;
+  if (notifPermission() !== "granted") return;
+
+  const lead = prefs.leadMinutes * 60_000;
+  const now = Date.now();
+
+  for (const s of states) {
+    if (!s.opensAt) continue;
+    const fireAt = s.opensAt - lead;
+    if (fireAt <= now) continue; // already past the lead time
+
+    const tag = `session-open:${s.def.id}:${s.opensAt}`;
+    const title = `${s.def.name} opens in ${prefs.leadMinutes} min`;
+    const body = s.def.hint;
+    schedule(title, body, tag, fireAt);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Economic calendar alerts
+// ---------------------------------------------------------------------------
+
+/** Schedule alerts for upcoming high-impact calendar events. */
+export function scheduleCalendarAlerts(
+  events: CalendarEvent[],
+  prefs: NotifPrefs
+) {
+  if (!prefs.enabled || !prefs.calendarAlerts) return;
+  if (notifPermission() !== "granted") return;
+
+  const lead = prefs.leadMinutes * 60_000;
+  const now = Date.now();
+
+  const high = events.filter((e) => e.impact === "High" && e.ts > now);
+
+  for (const e of high) {
+    const fireAt = e.ts - lead;
+    if (fireAt <= now) continue;
+
+    const tag = `calendar:${e.id}`;
+    const title = `${e.title} (${e.country}) in ${prefs.leadMinutes} min`;
+    const body = e.forecast ? `Forecast: ${e.forecast}` : "High-impact release";
+    schedule(title, body, tag, fireAt);
+  }
+}

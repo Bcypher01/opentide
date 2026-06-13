@@ -85,7 +85,7 @@ export default function EconCalendar({
   }
 
   return (
-    <div className="mt-3 border-t border-border pt-3">
+    <div id="econ-calendar" className="mt-3 scroll-mt-24 border-t border-border pt-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[10px] font-medium uppercase tracking-wider text-muted/70">
           Economic calendar
