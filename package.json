@@ -23,5 +23,12 @@
     "@types/react-dom": "^19.1.0",
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3"
-  }
+  },
+  "//browserslist": "Modern, ES-module-capable targets only. Without this, all tooling (Next SWC for app + node_modules, Tailwind/autoprefixer) falls back to browserslist `defaults`, which includes op_mini/kaios and forces legacy JS transforms + extra polyfills — the source of Lighthouse's 'Legacy JavaScript' flag.",
+  "browserslist": [
+    "> 0.5%",
+    "last 2 years",
+    "not dead",
+    "not op_mini all"
+  ]
 }
