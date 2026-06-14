@@ -28,9 +28,9 @@ export function usePolling<T>(url: string, intervalMs: number): PollState<T> {
       try {
         const res = await fetch(url);
         if (!res.ok) throw new Error(String(res.status));
-        const json = (await res.json()) as T;
+        const json = (await res.json()) as T & { error?: string };
         if (!cancelled)
-          setState({ data: json, error: false, lastUpdated: Date.now() });
+          setState({ data: json, error: Boolean(json.error), lastUpdated: Date.now() });
       } catch {
         if (!cancelled) setState((s) => ({ ...s, error: true }));
       }

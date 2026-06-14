@@ -73,8 +73,7 @@ export async function GET() {
       });
     }
     return NextResponse.json(
-      { error: "upstream_unavailable", list: [] },
-      { status: 502 }
+      { error: "upstream_unavailable", list: [], ts: Date.now() }
     );
   }
 }
