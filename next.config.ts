@@ -35,13 +35,18 @@ const csp = [
   `frame-ancestors 'none'`,
   // Lock DOM script sinks to vetted Trusted Types policies (prod only, so Fast
   // Refresh is never blocked in dev). Next's webpack runtime creates a
-  // "nextjs#bundler" policy to set <script>.src for chunk loading — omitting it
-  // blocks chunk loads and crashes the app with a client-side exception in prod.
+  // "nextjs#bundler" policy to set <script>.src for chunk loading, so that name
+  // must be allow-listed. CRUCIALLY, the App Router instantiates the webpack
+  // runtime more than once, so createPolicy("nextjs#bundler") runs repeatedly;
+  // without 'allow-duplicates' the 2nd call throws "already exists", the runtime
+  // silently falls back to assigning a raw string to script.src, and that trips
+  // require-trusted-types-for — crashing the app with a client-side exception
+  // (no CSP "violates" message, since the name itself is allowed).
   ...(isDev
     ? []
     : [
         `require-trusted-types-for 'script'`,
-        `trusted-types nextjs#bundler nextjs default dompurify`,
+        `trusted-types nextjs#bundler nextjs default dompurify 'allow-duplicates'`,
       ]),
   `upgrade-insecure-requests`,
 ].join("; ");
