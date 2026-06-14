@@ -209,8 +209,7 @@ export async function GET() {
     return NextResponse.json(payload);
   } catch {
     return NextResponse.json(
-      { error: "upstream_unavailable", assets: [], lookbackDays: 0, ts: Date.now() },
-      { status: 502 }
+      { error: "upstream_unavailable", assets: [], lookbackDays: 0, ts: Date.now() }
     );
   }
 }

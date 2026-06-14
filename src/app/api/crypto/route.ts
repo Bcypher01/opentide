@@ -45,8 +45,7 @@ export async function GET() {
     return NextResponse.json({ quotes, source: "Binance", ts: Date.now() });
   } catch {
     return NextResponse.json(
-      { error: "upstream_unavailable", quotes: [] },
-      { status: 502 }
+      { error: "upstream_unavailable", quotes: [], ts: Date.now() }
     );
   }
 }

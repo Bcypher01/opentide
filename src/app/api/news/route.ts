@@ -123,8 +123,7 @@ export async function GET() {
 
   if (items.length === 0) {
     return NextResponse.json(
-      { error: "upstream_unavailable", items: [], trending: [] },
-      { status: 502 }
+      { error: "upstream_unavailable", items: [], trending: [], ts: Date.now() }
     );
   }
 

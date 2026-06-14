@@ -45,8 +45,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ results, source: "Finnhub", ts: Date.now() });
   } catch {
     return NextResponse.json(
-      { error: "upstream_unavailable", results: [] },
-      { status: 502 }
+      { error: "upstream_unavailable", results: [], ts: Date.now() }
     );
   }
 }
