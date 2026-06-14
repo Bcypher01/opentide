@@ -21,6 +21,7 @@ const NotifSettings = dynamic(() => import("./NotifSettings"), { ssr: false });
 
 const NAV = [
   { href: "/", label: "Dashboard" },
+  { href: "/pulse", label: "Pulse" },
   { href: "/buzz", label: "Buzz" },
   { href: "/news", label: "News" },
 ];

@@ -35,6 +35,48 @@ function prevBusinessDay(dateStr: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+export interface CurrencyStrength {
+  ccy: string;
+  /** average % move vs all other tracked currencies over the day */
+  pct: number;
+}
+
+// All eight currencies (USD + the seven ECB-quoted majors). Rates are units of
+// the currency per 1 USD; USD itself is 1. A currency's strength is its mean %
+// change measured against every other currency, derived from the full cross
+// matrix — the cheapest honest "FX strength grid" there is.
+const STRENGTH_CCYS = ["USD", "EUR", "GBP", "JPY", "CHF", "AUD", "CAD", "NZD"];
+
+function currencyStrength(
+  latest: Record<string, number>,
+  prev: Record<string, number>
+): CurrencyStrength[] | null {
+  const L: Record<string, number> = { USD: 1, ...latest };
+  const P: Record<string, number> = { USD: 1, ...prev };
+  const ccys = STRENGTH_CCYS.filter(
+    (c) => Number.isFinite(L[c]) && L[c] > 0 && Number.isFinite(P[c]) && P[c] > 0
+  );
+  if (ccys.length < 3) return null;
+
+  const out = ccys.map((i) => {
+    let sum = 0;
+    let n = 0;
+    for (const j of ccys) {
+      if (i === j) continue;
+      // price of i in terms of j = rate_j / rate_i; change vs prev:
+      const now = L[j] / L[i];
+      const before = P[j] / P[i];
+      if (before > 0) {
+        sum += (now / before - 1) * 100;
+        n++;
+      }
+    }
+    return { ccy: i, pct: n > 0 ? sum / n : 0 };
+  });
+  out.sort((a, b) => b.pct - a.pct);
+  return out;
+}
+
 export async function GET() {
   try {
     const latestRes = await fetch(
@@ -52,9 +94,11 @@ export async function GET() {
 
     const current = buildPairs(latest.rates);
     let previous: ReturnType<typeof buildPairs> | null = null;
+    let strength: CurrencyStrength[] | null = null;
     if (prevRes.ok) {
       const prev = (await prevRes.json()) as FrankfurterLatest;
       previous = buildPairs(prev.rates);
+      strength = currencyStrength(latest.rates, prev.rates);
     }
 
     const quotes = current.map((q) => {
@@ -68,6 +112,7 @@ export async function GET() {
 
     return NextResponse.json({
       quotes,
+      strength,
       source: "ECB daily reference (Frankfurter)",
       asOf: latest.date,
       ts: Date.now(),
