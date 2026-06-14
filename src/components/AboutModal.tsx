@@ -9,6 +9,7 @@ import {
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
+  IconActivity,
   IconCalendar,
   IconCandles,
   IconClock,
@@ -42,7 +43,7 @@ const SLIDES: Slide[] = [
       "Built around market sessions — the thing no other free tool gets right.",
     ],
     where:
-      "You're on the Dashboard. Buzz and News have their own pages — see the nav, top-left.",
+      "You're on the Dashboard. Pulse, Buzz and News each have their own page — see the nav, top-left.",
   },
   {
     key: "sessions",
@@ -115,18 +116,32 @@ const SLIDES: Slide[] = [
       "The sun card at the very top of the dashboard. Educational, not investment advice.",
   },
   {
+    key: "pulse",
+    icon: IconActivity,
+    kicker: "Pulse",
+    title: "Take the market's pulse",
+    body: "A dedicated page for the deeper, cross-market read: risk regime, market heat, and how each asset behaves by session.",
+    details: [
+      "Risk dial — one risk-on / risk-off score synthesized from crypto, equities, both Fear & Greed readings and the dollar, with every input shown.",
+      "Heatmaps — scan crypto and stocks by 24h move, or read live currency strength across the major forex pairs.",
+      "Session stats — how each asset usually moves during London, New York, Tokyo and Sydney, versus what today has done so far.",
+    ],
+    where:
+      "The Pulse tab in the nav, top-left. The dashboard's “Market pulse” strip is the teaser; this page is the full read.",
+  },
+  {
     key: "tools",
     icon: IconCalendar,
     kicker: "More tools",
-    title: "Plug Opentide into your workflow",
-    body: "Three free tools to bring market context into the apps you already use.",
+    title: "Take Opentide with you",
+    body: "Three optional extras that bring market context into the apps you already use.",
     details: [
-      "Morning digest — star assets, then tap ☀ Morning in the header for a focused ritual view.",
-      "Subscribe to the calendar feed (/api/ics) so session opens + FOMC/CPI/NFP appear in Google Calendar, Apple Calendar or Notion.",
-      "Embed the session clock anywhere with a one-line iframe snippet from /widget.",
+      "Digest view — a stripped-down dashboard showing only your starred assets, for a quick morning glance.",
+      "Calendar feed — subscribe and market session opens plus big releases (Fed meetings, CPI, jobs day) appear automatically in Google, Apple Calendar or Notion.",
+      "Embeddable clock — drop the session clock onto your own site, blog or Notion with a one-line snippet.",
     ],
     where:
-      "Morning toggle: header (dashboard only, with watchlist). Calendar feed & widget: available right now at the URLs above.",
+      "Digest: the “Digest ›” button on the “Your day in 60 seconds” card, once you've starred at least one asset. Calendar feed and embed snippet live at the /api/ics and /widget URLs.",
   },
 ];
 

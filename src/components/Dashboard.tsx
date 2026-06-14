@@ -200,7 +200,7 @@ export default function Dashboard() {
         onSelectAsset={openChart}
       />
 
-      {/* Market pulse: sentiment + macro strip */}
+      {/* Market pulse: sentiment + macro strip (full read on /pulse) */}
       <PulseStrip data={pulse.data} />
 
       {/* Session clock — with economic calendar markers + countdowns */}

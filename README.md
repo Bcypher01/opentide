@@ -68,8 +68,8 @@ Calm intensity: dark-first (`#0A0B0D`), the teal accent `#00D4AA` is reserved fo
 
 ## Roadmap
 
-- **Done** — news engine (RSS, tagged by asset), top movers, TradingView charts, news-driven chart suggestions, ticker tape, market pulse strip (crypto + stocks Fear & Greed, BTC dominance, DXY, US yields), derivatives pulse (funding extremes, open interest), "while you were away" return-visit diff, economic calendar on the session clock (timeline markers, countdown chips, beginner explainers), daily briefing ("your day in 60 seconds")
-- **Next** — watchlist daily digest (gated on briefing engagement; see PHASE2.md), then Marketaux as a second news source, session alerts/push, accounts + sync
+- **Done** — news engine (RSS, tagged by asset), top movers, TradingView charts, news-driven chart suggestions, ticker tape, market pulse strip (crypto + stocks Fear & Greed, BTC dominance, DXY, US yields), derivatives pulse (funding extremes, open interest), "while you were away" return-visit diff, economic calendar on the session clock (timeline markers, countdown chips, beginner explainers), daily briefing ("your day in 60 seconds"), watchlist daily digest, session alerts/push (PWA), cross-market risk dial (risk-on/risk-off composite), market heatmaps (crypto + stocks 24h grids, forex currency-strength meter), session statistics engine (typical range/move per session vs today, crypto)
+- **Next** — Marketaux as a second news source, accounts + sync, and the remaining "moat" ideas (trader-profile presets, post-close journal)
 
 ---
 
