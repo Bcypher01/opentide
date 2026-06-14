@@ -1,17 +1,23 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useNow } from "@/lib/hooks";
 import { sessionGreeting } from "@/lib/sessions";
 import { useStore } from "@/lib/store";
-import AboutModal from "./AboutModal";
-import ChartModal from "./ChartModal";
-import CommandPalette from "./CommandPalette";
 import { IconBell, IconHelp } from "./Icons";
 import Logo, { Wordmark } from "./Logo";
-import NotifSettings from "./NotifSettings";
+
+// These overlays are never visible on first paint and the two animated ones
+// drag in framer-motion. Loading them with next/dynamic keeps that code out of
+// the initial bundle — each chunk is fetched only the first time its overlay
+// opens (see the *Loaded latches below), cutting initial JS and main-thread work.
+const AboutModal = dynamic(() => import("./AboutModal"), { ssr: false });
+const ChartModal = dynamic(() => import("./ChartModal"), { ssr: false });
+const CommandPalette = dynamic(() => import("./CommandPalette"), { ssr: false });
+const NotifSettings = dynamic(() => import("./NotifSettings"), { ssr: false });
 
 const NAV = [
   { href: "/", label: "Dashboard" },
@@ -35,6 +41,25 @@ export default function AppShell({
   const { useUTC, toggleUTC, openAbout, aboutSeen, notifPrefs } = useStore();
   const togglePalette = useStore((s) => s.togglePalette);
   const openPalette = useStore((s) => s.openPalette);
+
+  // Open-state for the lazy overlays. Once an overlay has been opened we keep
+  // it mounted (the *Loaded latch) so its enter/exit animations still play on
+  // subsequent toggles — but its chunk isn't fetched until that first open.
+  const paletteOpen = useStore((s) => s.paletteOpen);
+  const aboutOpen = useStore((s) => s.aboutOpen);
+  const modalAsset = useStore((s) => s.modalAsset);
+  const [paletteLoaded, setPaletteLoaded] = useState(false);
+  const [aboutLoaded, setAboutLoaded] = useState(false);
+  const [chartLoaded, setChartLoaded] = useState(false);
+  useEffect(() => {
+    if (paletteOpen) setPaletteLoaded(true);
+  }, [paletteOpen]);
+  useEffect(() => {
+    if (aboutOpen) setAboutLoaded(true);
+  }, [aboutOpen]);
+  useEffect(() => {
+    if (modalAsset) setChartLoaded(true);
+  }, [modalAsset]);
 
   // First visit ever: open the tour once
   useEffect(() => {
@@ -215,9 +240,9 @@ export default function AppShell({
         {children}
       </main>
 
-      {mounted && <ChartModal />}
-      {mounted && <AboutModal />}
-      {mounted && <CommandPalette />}
+      {mounted && chartLoaded && <ChartModal />}
+      {mounted && aboutLoaded && <AboutModal />}
+      {mounted && paletteLoaded && <CommandPalette />}
 
       <footer className="mx-auto w-full max-w-[1700px] px-4 pb-8 text-center text-xs text-muted/60 lg:px-6">
         Data: Binance · Frankfurter (ECB) · Finnhub · CoinGecko · Yahoo · CoinDesk · Cointelegraph

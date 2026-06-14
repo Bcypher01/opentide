@@ -81,25 +81,29 @@ body {
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
-/* Skeleton shimmer */
+/* Skeleton shimmer — a translucent highlight swept across with transform so the
+   animation stays on the compositor (animating background-position forces a
+   paint on every frame for every skeleton box, which Lighthouse flags as a
+   non-composited animation). */
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
   100% {
-    background-position: 200% 0;
+    transform: translateX(100%);
   }
 }
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--color-surface2) 25%,
-    #1f232c 50%,
-    var(--color-surface2) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.6s linear infinite;
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surface2);
   border-radius: 6px;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, #1f232c, transparent);
+  animation: shimmer 1.6s linear infinite;
+  will-change: transform;
 }
 
 /* Marquee ticker tape */
@@ -150,7 +154,7 @@ body.overlay-open .marquee-track {
   .flash-up,
   .flash-down,
   .pulse-dot,
-  .skeleton,
+  .skeleton::after,
   .star-pop,
   .marquee-track {
     animation: none !important;
