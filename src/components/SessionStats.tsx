@@ -92,6 +92,37 @@ function Spotlight({ stat, inProgress }: { stat: SessionStat; inProgress: boolea
   );
 }
 
+/** Loading state — mirrors the spotlight card + the four per-session tiles. */
+function SessionStatsSkeleton() {
+  return (
+    <section key="sessionstats-loading" className="mt-5" aria-label="Session statistics">
+      <div className="mb-2 flex items-center gap-3">
+        <div className="skeleton h-4 w-24 rounded" />
+        <div className="skeleton h-3 w-48 rounded" />
+      </div>
+      <div className="rounded-2xl border border-border bg-surface p-3">
+        <div className="rounded-xl border border-border bg-surface2 p-3.5">
+          <div className="flex justify-between">
+            <div className="skeleton h-3.5 w-28 rounded" />
+            <div className="skeleton h-3 w-20 rounded" />
+          </div>
+          <div className="skeleton mt-2.5 h-3.5 w-3/4 rounded" />
+          <div className="skeleton mt-3 h-2 w-full rounded-full" />
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-lg border border-border bg-surface2/50 p-2.5">
+              <div className="skeleton h-3 w-14 rounded" />
+              <div className="skeleton mt-1.5 h-3 w-16 rounded" />
+              <div className="skeleton mt-1.5 h-3 w-12 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /**
  * Session statistics — extends the DST-aware session math into a genuinely
  * novel free feature: how each asset typically behaves *per session*, and how
@@ -114,7 +145,10 @@ export default function SessionStats({ data, states, onSelect }: Props) {
     }
   }, [assets, assetId]);
 
-  if (!data || data.error || assets.length === 0 || !active) return null;
+  // data === null → still loading: hold the layout with a skeleton. A resolved
+  // error / empty payload (upstream unavailable) hides the section.
+  if (!data) return <SessionStatsSkeleton />;
+  if (data.error || assets.length === 0 || !active) return null;
 
   const focusId = focusSession(states);
   const focusStat = active.stats.find((s) => s.session === focusId) ?? active.stats[0];
@@ -122,7 +156,7 @@ export default function SessionStats({ data, states, onSelect }: Props) {
   const inProgress = !!focusState?.isOpen && focusStat.todayInProgress;
 
   return (
-    <section className="mt-5" aria-label="Session statistics">
+    <section key="sessionstats-loaded" className="fade-in mt-5" aria-label="Session statistics">
       <div className="mb-2 flex flex-wrap items-baseline gap-3">
         <h2 className="font-display text-base font-semibold tracking-tight">Session stats</h2>
         <span className="text-xs text-muted">

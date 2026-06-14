@@ -22,6 +22,29 @@ interface Props {
   useUTC: boolean;
   showAll: boolean;
   onToggleShowAll: () => void;
+  /** True while the calendar feed is still loading. Distinguishes "not yet
+   *  fetched" (show a skeleton) from "intentionally absent" (widget passes
+   *  calendar={null} with loading=false → stay suppressed). */
+  loading?: boolean;
+}
+
+/** Loading state — label + a couple of countdown-chip placeholders. */
+function EconCalendarSkeleton() {
+  return (
+    <div
+      key="econ-loading"
+      className="mt-3 scroll-mt-24 border-t border-border pt-3"
+    >
+      <div className="flex items-center gap-2">
+        <div className="skeleton h-2.5 w-32 rounded" />
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {[200, 168, 184].map((w, i) => (
+          <div key={i} className="skeleton h-[34px] rounded-full" style={{ width: `${w}px` }} />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function ImpactDot({ impact }: { impact: CalendarEvent["impact"] }) {
@@ -48,10 +71,11 @@ export default function EconCalendar({
   useUTC,
   showAll,
   onToggleShowAll,
+  loading = false,
 }: Props) {
   const [openId, setOpenId] = useState<string | null>(null);
 
-  if (!calendar) return null;
+  if (!calendar) return loading ? <EconCalendarSkeleton /> : null;
   const { events, anchors } = calendar;
 
   // Feed down → fall back to the static US anchors so the clock still says
@@ -85,7 +109,7 @@ export default function EconCalendar({
   }
 
   return (
-    <div id="econ-calendar" className="mt-3 scroll-mt-24 border-t border-border pt-3">
+    <div key="econ-loaded" id="econ-calendar" className="fade-in mt-3 scroll-mt-24 border-t border-border pt-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[10px] font-medium uppercase tracking-wider text-muted/70">
           Economic calendar

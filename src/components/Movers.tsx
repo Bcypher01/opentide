@@ -27,7 +27,7 @@ export default function Movers({ quoteOf, onSelect }: Props) {
 
   if (movers.length === 0) {
     return (
-      <section className="mt-5" aria-label="Top movers">
+      <section key="movers-loading" className="mt-5" aria-label="Top movers">
         <div className="mb-3 flex items-center gap-3">
           <h2 className="font-display flex items-center gap-2 text-base font-semibold tracking-tight">
             <IconTrendingUp size={16} className="text-accent" /> Movers
@@ -44,7 +44,7 @@ export default function Movers({ quoteOf, onSelect }: Props) {
   }
 
   return (
-    <section className="mt-5" aria-label="Top movers">
+    <section key="movers-loaded" className="fade-in mt-5" aria-label="Top movers">
       <div className="mb-3 flex items-center gap-3">
         <h2 className="font-display flex items-center gap-2 text-base font-semibold tracking-tight">
           <IconTrendingUp size={16} className="text-accent" /> Movers

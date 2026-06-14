@@ -94,6 +94,23 @@ function Chip({
   );
 }
 
+/** Loading state — chip-shaped placeholders so the strip holds its space
+ * instead of popping in once sentiment data lands. */
+function PulseStripSkeleton() {
+  return (
+    <section key="pulse-loading" aria-label="Market pulse" className="mt-4">
+      <div className="mb-1.5 flex items-center gap-2 px-0.5">
+        <div className="skeleton h-2.5 w-20 rounded" />
+      </div>
+      <div className="scrollbar-none flex items-center gap-2 overflow-x-auto">
+        {[36, 28, 32, 40, 30].map((w, i) => (
+          <div key={i} className="skeleton h-[34px] rounded-full" style={{ width: `${w * 4}px` }} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /**
  * Market Pulse — a thin sentiment/macro strip: crypto Fear & Greed, BTC
  * dominance, total-mcap 24h, the US dollar index and US yields. Each chip
@@ -114,7 +131,8 @@ export default function PulseStrip({ data }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [openKey]);
 
-  if (!data) return null;
+  // data === null → still loading: hold the space with a skeleton.
+  if (!data) return <PulseStripSkeleton />;
   const {
     fearGreed: fg,
     stockFearGreed: sfg,
@@ -277,7 +295,7 @@ export default function PulseStrip({ data }: Props) {
   const active = chips.find((c) => c.key === openKey) ?? null;
 
   return (
-    <section aria-label="Market pulse" className="mt-4">
+    <section key="pulse-loaded" aria-label="Market pulse" className="fade-in mt-4">
       <div className="mb-1.5 flex items-center gap-2 px-0.5">
         <span className="text-[10px] font-medium uppercase tracking-wider text-muted/70">
           Market pulse
