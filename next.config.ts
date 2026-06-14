@@ -33,21 +33,22 @@ const csp = [
   `base-uri 'self'`,
   `form-action 'self'`,
   `frame-ancestors 'none'`,
-  // Lock DOM script sinks to vetted Trusted Types policies (prod only, so Fast
-  // Refresh is never blocked in dev). Next's webpack runtime creates a
-  // "nextjs#bundler" policy to set <script>.src for chunk loading, so that name
-  // must be allow-listed. CRUCIALLY, the App Router instantiates the webpack
-  // runtime more than once, so createPolicy("nextjs#bundler") runs repeatedly;
-  // without 'allow-duplicates' the 2nd call throws "already exists", the runtime
-  // silently falls back to assigning a raw string to script.src, and that trips
-  // require-trusted-types-for — crashing the app with a client-side exception
-  // (no CSP "violates" message, since the name itself is allowed).
-  ...(isDev
-    ? []
-    : [
-        `require-trusted-types-for 'script'`,
-        `trusted-types nextjs#bundler nextjs default dompurify 'allow-duplicates'`,
-      ]),
+  // NOTE: Trusted Types enforcement (`require-trusted-types-for 'script'`) is
+  // deliberately NOT set. It only runs in a production build, which is why the
+  // app worked in `next dev` but crashed on every Vercel deploy: multiple
+  // scripts on the page assign a raw string to `script.src` and none of them go
+  // through a Trusted Types policy —
+  //   1. @vercel/analytics (<Analytics/> in the root layout) injects its script
+  //      with a plain-string src and creates no policy at all; and
+  //   2. Next's webpack runtime falls back to a raw string whenever its
+  //      createPolicy("nextjs#bundler") call throws (it's instantiated more than
+  //      once under the App Router).
+  // Either one trips the rule and takes the whole app down with a client-side
+  // exception. Making third-party scripts TT-compliant isn't feasible, and the
+  // only workaround — a global passthrough `default` policy — would neuter
+  // Trusted Types anyway. Every other CSP directive above still applies; this
+  // just drops the one defense-in-depth layer that's incompatible here.
+  // To revisit, do it behind a per-request nonce on authed/dynamic pages only.
   `upgrade-insecure-requests`,
 ].join("; ");
 
