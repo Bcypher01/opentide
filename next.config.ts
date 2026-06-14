@@ -34,10 +34,15 @@ const csp = [
   `form-action 'self'`,
   `frame-ancestors 'none'`,
   // Lock DOM script sinks to vetted Trusted Types policies (prod only, so Fast
-  // Refresh is never blocked in dev). Next ships its own "nextjs" policy.
+  // Refresh is never blocked in dev). Next's webpack runtime creates a
+  // "nextjs#bundler" policy to set <script>.src for chunk loading — omitting it
+  // blocks chunk loads and crashes the app with a client-side exception in prod.
   ...(isDev
     ? []
-    : [`require-trusted-types-for 'script'`, `trusted-types nextjs default dompurify`]),
+    : [
+        `require-trusted-types-for 'script'`,
+        `trusted-types nextjs#bundler nextjs default dompurify`,
+      ]),
   `upgrade-insecure-requests`,
 ].join("; ");
 
