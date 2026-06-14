@@ -21,6 +21,8 @@ interface Props {
   selected: SessionId | null;
   onSelect: (id: SessionId | null) => void;
   calendar?: CalendarPayload | null;
+  /** True while the calendar feed is still loading (drives the skeleton). */
+  calendarLoading?: boolean;
 }
 
 /** A band may wrap midnight UTC → render as up to two segments. */
@@ -40,6 +42,7 @@ export default function SessionClock({
   selected,
   onSelect,
   calendar = null,
+  calendarLoading = false,
 }: Props) {
   const t = now.getTime();
   const [showAllEvents, setShowAllEvents] = useState(false);
@@ -270,6 +273,7 @@ export default function SessionClock({
         useUTC={useUTC}
         showAll={showAllEvents}
         onToggleShowAll={() => setShowAllEvents((v) => !v)}
+        loading={calendarLoading}
       />
     </section>
   );

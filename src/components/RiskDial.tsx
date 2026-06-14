@@ -68,6 +68,32 @@ function Gauge({
   );
 }
 
+/** Loading state — semicircle gauge + blurb/chips placeholder. */
+function RiskDialSkeleton() {
+  return (
+    <section key="riskdial-loading" className="mt-5" aria-label="Cross-market risk dial">
+      <div className="mb-2 flex items-baseline gap-3">
+        <div className="skeleton h-4 w-20 rounded" />
+        <div className="skeleton h-3 w-44 rounded" />
+      </div>
+      <div className="rounded-2xl border border-border bg-surface p-4">
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
+          <div className="skeleton h-[104px] w-[200px] shrink-0 rounded-t-full" />
+          <div className="min-w-0 flex-1">
+            <div className="skeleton h-3.5 w-full rounded" />
+            <div className="skeleton mt-2 h-3.5 w-4/5 rounded" />
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="skeleton h-6 w-28 rounded-full" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /**
  * Cross-market risk dial — a single risk-on/risk-off gauge synthesised from
  * signals the dashboard already has (BTC, crypto breadth, equities, both
@@ -86,6 +112,9 @@ export default function RiskDial({ pulse, quoteOf }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  // No pulse data yet → loading: show the gauge skeleton. Once data is in but
+  // there still aren't enough signals to score, hide the dial.
+  if (!pulse) return <RiskDialSkeleton />;
   if (!dial) return null;
 
   const scoreTone =
@@ -93,7 +122,7 @@ export default function RiskDial({ pulse, quoteOf }: Props) {
   const signStr = `${dial.score > 0 ? "+" : ""}${dial.score}`;
 
   return (
-    <section className="mt-5" aria-label="Cross-market risk dial">
+    <section key="riskdial-loaded" className="fade-in mt-5" aria-label="Cross-market risk dial">
       <div className="mb-2 flex items-baseline gap-3">
         <h2 className="font-display text-base font-semibold tracking-tight">Risk dial</h2>
         <span className="text-xs text-muted">risk-on / risk-off · composite</span>

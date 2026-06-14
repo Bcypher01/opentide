@@ -106,6 +106,23 @@ body {
   will-change: transform;
 }
 
+/* Content settle-in — real data easing in as it replaces its skeleton, so
+   nothing pops abruptly. Subtle fade + short upward drift; runs once on mount.
+   GPU-friendly (opacity + transform only). */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-in {
+  animation: fade-in 0.35s var(--ease-glide, ease-out) both;
+}
+
 /* Marquee ticker tape */
 @keyframes marquee {
   from {
@@ -156,6 +173,7 @@ body.overlay-open .marquee-track {
   .pulse-dot,
   .skeleton::after,
   .star-pop,
+  .fade-in,
   .marquee-track {
     animation: none !important;
   }

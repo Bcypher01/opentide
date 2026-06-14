@@ -104,9 +104,17 @@ export async function GET() {
     const payload: DerivsPayload = { funding, detail, ts: Date.now() };
     return NextResponse.json(payload);
   } catch {
-    return NextResponse.json(
-      { error: "upstream_unavailable", funding: [], detail: [], ts: Date.now() },
-      { status: 502 }
-    );
+    // fapi has no US-safe mirror, so this endpoint is *expected* to fail from
+    // Vercel's US IPs (451). That's a handled, graceful-degradation case — the
+    // client reads `error` and hides the panel — so return 200, not an error
+    // status. A 5xx here just logs red console noise on every visit and, because
+    // usePolling discards the body on !res.ok, the error field never even reaches
+    // the client.
+    return NextResponse.json({
+      error: "upstream_unavailable",
+      funding: [],
+      detail: [],
+      ts: Date.now(),
+    });
   }
 }

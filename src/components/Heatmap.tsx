@@ -38,11 +38,19 @@ function Tiles({
     [assets, quoteOf]
   );
 
+  // No quotes yet → skeleton tiles in the same grid, so the panel doesn't
+  // collapse to a one-line message and then pop a full grid into place.
   if (tiles.length === 0)
-    return <p className="px-1 py-6 text-center text-xs text-muted">Waiting for quotes…</p>;
+    return (
+      <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6 lg:grid-cols-8">
+        {Array.from({ length: assets.length || 16 }).map((_, i) => (
+          <div key={i} className="skeleton aspect-[5/4] rounded-lg" />
+        ))}
+      </div>
+    );
 
   return (
-    <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6 lg:grid-cols-8">
+    <div className="fade-in grid grid-cols-4 gap-1.5 sm:grid-cols-6 lg:grid-cols-8">
       {tiles.map(({ a, pct }) => (
         <button
           key={a.id}

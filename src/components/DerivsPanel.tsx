@@ -16,6 +16,23 @@ const fmtFunding = (rate: number) => {
 const fmtOi = (usd: number) =>
   usd >= 1e9 ? `$${(usd / 1e9).toFixed(1)}B` : `$${(usd / 1e6).toFixed(0)}M`;
 
+/** Loading state — pill-shaped placeholders matching the funding/OI chips. */
+function DerivsPanelSkeleton() {
+  return (
+    <section key="derivs-loading" className="mt-5" aria-label="Derivatives pulse">
+      <div className="mb-2 flex items-baseline gap-3">
+        <div className="skeleton h-4 w-24 rounded" />
+        <div className="skeleton h-3 w-48 rounded" />
+      </div>
+      <div className="flex gap-2 overflow-x-auto">
+        {[112, 120, 104, 132, 128, 120].map((w, i) => (
+          <div key={i} className="skeleton h-[34px] shrink-0 rounded-full" style={{ width: `${w}px` }} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /**
  * Derivatives pulse — Binance Futures funding extremes + BTC/ETH open
  * interest. Positioning at a glance: extreme positive funding = crowded
@@ -23,7 +40,10 @@ const fmtOi = (usd: number) =>
  * unavailable (fapi has no US-safe mirror).
  */
 export default function DerivsPanel({ data, onSelect }: Props) {
-  if (!data || data.error || data.funding.length === 0) return null;
+  // data === null → still loading: show the skeleton. Once it resolves to an
+  // error or an empty payload (e.g. fapi geo-blocked on Vercel), hide entirely.
+  if (!data) return <DerivsPanelSkeleton />;
+  if (data.error || data.funding.length === 0) return null;
 
   // Most-stretched funding first; show the 4 extremes.
   const extremes = [...data.funding]
@@ -31,7 +51,7 @@ export default function DerivsPanel({ data, onSelect }: Props) {
     .slice(0, 4);
 
   return (
-    <section className="mt-5" aria-label="Derivatives pulse">
+    <section key="derivs-loaded" className="fade-in mt-5" aria-label="Derivatives pulse">
       <div className="mb-2 flex items-baseline gap-3">
         <h2 className="font-display text-base font-semibold tracking-tight">
           Derivatives

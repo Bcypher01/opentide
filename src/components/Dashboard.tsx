@@ -212,6 +212,7 @@ export default function Dashboard() {
           selected={sessionFilter}
           onSelect={setSessionFilter}
           calendar={calendar.data}
+          calendarLoading={calendar.data === null && !calendar.error}
         />
       </div>
 
