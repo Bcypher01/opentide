@@ -11,7 +11,10 @@ const FEEDS: Array<{ url: string; source: string; market: Market }> = [
   { url: "https://www.coindesk.com/arc/outboundfeeds/rss/", source: "CoinDesk", market: "crypto" },
   { url: "https://cointelegraph.com/rss", source: "Cointelegraph", market: "crypto" },
   { url: "https://www.cnbc.com/id/20910258/device/rss/rss.html", source: "CNBC Markets", market: "stocks" },
-  { url: "https://feeds.content.dowjones.io/public/rss/mw_topstories", source: "MarketWatch", market: "stocks" },
+  // Market Pulse (not Top Stories): markets-only bulletins. Top Stories mixed
+  // in personal-finance advice columns (the "Moneyist" Q&As) that aren't
+  // market-relevant; Market Pulse is terse, real-time market coverage only.
+  { url: "https://feeds.content.dowjones.io/public/rss/mw_marketpulse", source: "MarketWatch", market: "stocks" },
   // Forex: multiple sources because FXStreet's WAF often rejects datacenter
   // IPs (e.g. Vercel), which would otherwise leave the forex tab empty.
   { url: "https://www.fxstreet.com/rss/news", source: "FXStreet", market: "forex" },

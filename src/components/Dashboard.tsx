@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -19,12 +20,20 @@ import { useOpenChart } from "@/lib/nav";
 import { getAllSessionStates } from "@/lib/sessions";
 import { useStore } from "@/lib/store";
 import AppShell from "./AppShell";
-import ChartPanel from "./ChartPanel";
 import DailyBriefing from "./DailyBriefing";
 import DashboardSkeleton from "./DashboardSkeleton";
 import DerivsPanel from "./DerivsPanel";
-import DigestView from "./DigestView";
 import Hero from "./Hero";
+
+// ChartPanel embeds a TradingView iframe and sits below the fold; DigestView is
+// a separate full-screen mode most sessions never enter. Both load on demand.
+// ChartPanel keeps a height-matched placeholder so deferring it adds no CLS.
+const ChartPanel = dynamic(() => import("./ChartPanel"), {
+  loading: () => (
+    <div className="rounded-2xl border border-border bg-surface lg:h-[604px]" />
+  ),
+});
+const DigestView = dynamic(() => import("./DigestView"), { ssr: false });
 import Movers from "./Movers";
 import NewsFeed, { type NewsItem } from "./NewsFeed";
 import PriceRow from "./PriceRow";

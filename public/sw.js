@@ -3,7 +3,7 @@
 // Notification scheduling (session opens, calendar events) is driven by the
 // app via postMessage so the SW doesn't need to know the session math.
 
-const CACHE = "opentide-v1";
+const CACHE = "opentide-v2";
 
 // Shell assets to pre-cache on install (Next.js injects hashed chunks at
 // build time; we only cache the bare essentials here to avoid stale JS).
@@ -36,7 +36,10 @@ self.addEventListener("activate", (event) => {
 });
 
 // ---------------------------------------------------------------------------
-// Fetch — stale-while-revalidate for the shell page; network-first for API.
+// Fetch — network-first for HTML documents (so the served page always matches
+// the current build's hashed chunks — stale HTML pointing at old chunk URLs is
+// what causes ChunkLoadError flashes after a rebuild); stale-while-revalidate
+// for other shell assets (icons, manifest).
 // ---------------------------------------------------------------------------
 self.addEventListener("fetch", (event) => {
   const { request } = event;
@@ -52,7 +55,25 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Stale-while-revalidate: serve cache, update in background
+  // Navigation (HTML document) requests: network-first so the markup always
+  // references the chunks the current build actually emitted. Fall back to
+  // cache only when offline.
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(request, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(request).then((c) => c ?? caches.match("/")))
+    );
+    return;
+  }
+
+  // Other shell assets (icons, manifest): stale-while-revalidate.
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const cached = await cache.match(request);
