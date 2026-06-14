@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 // display:"swap" renders text immediately in a fallback and swaps the webfont
@@ -120,9 +121,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   // Note: JSON-LD is type="application/ld+json" — a data block, not executable
-  // script — so the strict CSP doesn't apply to it and it needs no nonce.
-  // Next automatically nonces its own scripts by reading the CSP header set in
-  // middleware, so the nonce never has to be threaded through here.
+  // script — so the CSP's script-src doesn't apply to it.
   return (
     <html lang="en" className={`${inter.variable} ${jbmono.variable} ${grotesk.variable}`}>
       <body>
@@ -131,6 +130,10 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         {children}
+        {/* Its injected script is served same-origin (/_vercel/insights/script.js),
+            allowed by script-src 'self'; beacons hit same-origin /_vercel/insights/*,
+            covered by connect-src 'self'. No CSP changes needed. */}
+        <Analytics />
       </body>
     </html>
   );
