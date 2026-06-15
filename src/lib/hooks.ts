@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 import { BINANCE_SYMBOLS } from "./assets";
 
 // ---------------------------------------------------------------------------
@@ -53,6 +54,41 @@ export function usePolling<T>(url: string, intervalMs: number): PollState<T> {
 }
 
 // ---------------------------------------------------------------------------
+// useInView — latches true once the ref'd element scrolls within `rootMargin`
+// of the viewport, then disconnects. Lets callers lazy-mount heavy children
+// (e.g. the TradingView iframe) exactly once, off the initial-load path.
+// ---------------------------------------------------------------------------
+export function useInView<T extends Element>(
+  rootMargin = "200px"
+): [RefObject<T | null>, boolean] {
+  const ref = useRef<T | null>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || inView) return;
+    // No IntersectionObserver (very old browser) → just show it.
+    if (typeof IntersectionObserver === "undefined") {
+      setInView(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setInView(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [inView, rootMargin]);
+
+  return [ref, inView];
+}
+
+// ---------------------------------------------------------------------------
 // useBinanceLive — one combined WebSocket stream of miniTickers for all
 // tracked crypto. Browser-direct: costs the server nothing.
 // ---------------------------------------------------------------------------
@@ -76,6 +112,9 @@ export function useBinanceLive(): Record<string, LiveTick> {
 
     function connect() {
       if (!alive) return;
+      // Don't open (or burn a retry) while the tab is hidden — wait for the
+      // next visibility change instead.
+      if (document.visibilityState === "hidden") return;
       // data-stream.binance.vision = official market-data mirror, not geo-blocked
       // for US visitors (stream.binance.com returns 451 from US IPs).
       ws = new WebSocket(`wss://data-stream.binance.vision/stream?streams=${streams}`);
@@ -96,12 +135,34 @@ export function useBinanceLive(): Record<string, LiveTick> {
         }
       };
       ws.onclose = () => {
+        ws = null;
         if (alive) retryTimer = setTimeout(connect, 3000);
       };
       ws.onerror = () => ws?.close();
     }
 
-    connect();
+    // Defer the first connect until the browser is idle, so the socket
+    // handshake (and any failure log on restricted networks) stays off the
+    // initial-load critical path and out of the page-load trace.
+    let idleHandle: number | null = null;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    const rIC = (
+      globalThis as unknown as {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      }
+    ).requestIdleCallback;
+    if (typeof rIC === "function") {
+      idleHandle = rIC(connect, { timeout: 3000 });
+    } else {
+      idleTimer = setTimeout(connect, 1200);
+    }
+
+    // Reconnect when the tab becomes visible again if we deferred/closed.
+    const onVisible = () => {
+      if (alive && document.visibilityState === "visible" && !ws) connect();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     // Flash-friendly: flush buffered ticks to React at most every 1.5s
     flushTimer = setInterval(() => {
       if (Object.keys(bufRef.current).length === 0) return;
@@ -111,6 +172,13 @@ export function useBinanceLive(): Record<string, LiveTick> {
 
     return () => {
       alive = false;
+      document.removeEventListener("visibilitychange", onVisible);
+      if (idleHandle !== null) {
+        const cIC = (globalThis as unknown as { cancelIdleCallback?: (h: number) => void })
+          .cancelIdleCallback;
+        cIC?.(idleHandle);
+      }
+      if (idleTimer) clearTimeout(idleTimer);
       if (flushTimer) clearInterval(flushTimer);
       if (retryTimer) clearTimeout(retryTimer);
       ws?.close();

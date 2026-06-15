@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ASSET_BY_ID } from "@/lib/assets";
 import { CHART_INTERVALS, resolveChartTarget, tvEmbedUrl } from "@/lib/chart";
 import { formatChangePct, formatPrice } from "@/lib/format";
+import { useInView } from "@/lib/hooks";
 
 interface Props {
   assetId: string;
@@ -19,6 +20,9 @@ export default function ChartPanel({ assetId, price, changePct, trending, onSele
   const { symbol, displaySymbol, displayName, market } = resolveChartTarget(assetId);
   const up = (changePct ?? 0) >= 0;
   const src = tvEmbedUrl(symbol, interval);
+  // Defer the TradingView iframe until the chart scrolls near the viewport,
+  // keeping its render-blocking JS + WebSockets off the initial-load path.
+  const [chartRef, chartInView] = useInView<HTMLDivElement>("300px");
 
   return (
     <section
@@ -90,16 +94,20 @@ export default function ChartPanel({ assetId, price, changePct, trending, onSele
         </div>
       )}
 
-      {/* TradingView free embed */}
-      <div className="h-[420px] w-full bg-bg sm:h-[480px]">
-        <iframe
-          key={`${symbol}-${interval}`}
-          src={src}
-          title={`TradingView chart — ${displaySymbol}`}
-          className="h-full w-full"
-          frameBorder="0"
-          allowFullScreen
-        />
+      {/* TradingView free embed — mounted only once scrolled into view */}
+      <div ref={chartRef} className="h-[420px] w-full bg-bg sm:h-[480px]">
+        {chartInView ? (
+          <iframe
+            key={`${symbol}-${interval}`}
+            src={src}
+            title={`TradingView chart — ${displaySymbol}`}
+            className="h-full w-full"
+            frameBorder="0"
+            allowFullScreen
+          />
+        ) : (
+          <div className="h-full w-full animate-pulse bg-surface2/40" aria-hidden />
+        )}
       </div>
     </section>
   );
