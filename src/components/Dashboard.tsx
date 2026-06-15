@@ -104,6 +104,7 @@ export default function Dashboard() {
     digestMode,
     setDigestMode,
     notifPrefs,
+    openPalette,
   } = useStore();
 
   // Re-schedule alerts whenever calendar data or prefs change
@@ -142,9 +143,6 @@ export default function Dashboard() {
     return map;
   }, [forex.data, crypto.data, stocks.data, live]);
 
-  // Per-list search (markets card only). Matches symbol or name.
-  const [marketQuery, setMarketQuery] = useState("");
-
   // Auto-sync the session filter to whichever session is currently open
   // (e.g. Tokyo open → Tokyo pairs). During overlaps we pick the most recently
   // opened session (SESSIONS is chronological, so the last open one wins).
@@ -169,15 +167,12 @@ export default function Dashboard() {
   );
 
   const visible = useMemo(() => {
-    const q = marketQuery.trim().toLowerCase();
     return ALL_ASSETS.filter((a) => {
       if (marketFilter !== "all" && a.market !== marketFilter) return false;
       if (sessionFilter && !a.sessions.includes(sessionFilter)) return false;
-      if (q && !(a.symbol.toLowerCase().includes(q) || a.name.toLowerCase().includes(q)))
-        return false;
       return true;
     });
-  }, [marketFilter, sessionFilter, marketQuery]);
+  }, [marketFilter, sessionFilter]);
 
   const byMarket = useMemo(() => {
     const g: Record<Market, AssetDef[]> = { forex: [], crypto: [], stocks: [] };
@@ -317,56 +312,62 @@ export default function Dashboard() {
           {/* Markets — single card, scrollable; fills leftover column height on lg+ */}
           <section className="rounded-2xl border border-border bg-surface lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
             <div className="shrink-0 border-b border-border p-3">
-              <nav className="flex flex-wrap items-center gap-2" aria-label="Market filter">
-                {(["all", "forex", "crypto", "stocks"] as const).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setMarketFilter(m)}
-                    className={`min-h-[32px] rounded-full px-3.5 py-1 text-xs transition-colors ${
-                      marketFilter === m
-                        ? "bg-text font-medium text-bg"
-                        : "border border-border bg-surface2 text-muted hover:text-text"
-                    }`}
-                  >
-                    {m === "all" ? "All" : MARKET_LABEL[m]}
-                  </button>
-                ))}
-                {sessionFilter && (
-                  <button
-                    onClick={() => handleSessionSelect(null)}
-                    className="min-h-[32px] rounded-full border border-accent/50 bg-accent/10 px-3.5 py-1 text-xs text-accent"
-                  >
-                    {states.find((s) => s.def.id === sessionFilter)?.def.name} ✕
-                  </button>
-                )}
-              </nav>
+              <div className="flex items-start gap-2">
+                <nav
+                  className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+                  aria-label="Market filter"
+                >
+                  {(["all", "forex", "crypto", "stocks"] as const).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setMarketFilter(m)}
+                      className={`min-h-[32px] rounded-full px-3.5 py-1 text-xs transition-colors ${
+                        marketFilter === m
+                          ? "bg-text font-medium text-bg"
+                          : "border border-border bg-surface2 text-muted hover:text-text"
+                      }`}
+                    >
+                      {m === "all" ? "All" : MARKET_LABEL[m]}
+                    </button>
+                  ))}
+                  {sessionFilter && (
+                    <button
+                      onClick={() => handleSessionSelect(null)}
+                      className="min-h-[32px] max-w-full truncate rounded-full border border-accent/50 bg-accent/10 px-3.5 py-1 text-xs text-accent"
+                    >
+                      {states.find((s) => s.def.id === sessionFilter)?.def.name} ✕
+                    </button>
+                  )}
+                </nav>
 
-              <div className="relative mt-2">
-                <input
-                  type="text"
-                  value={marketQuery}
-                  onChange={(e) => setMarketQuery(e.target.value)}
-                  placeholder="Search markets…"
-                  aria-label="Search markets"
-                  className="min-h-[32px] w-full rounded-full border border-border bg-surface2 px-3.5 py-1 pr-8 text-xs text-text placeholder:text-muted focus:border-accent/50 focus:outline-none"
-                />
-                {marketQuery && (
-                  <button
-                    onClick={() => setMarketQuery("")}
-                    aria-label="Clear search"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-text"
+                {/* Filters above only cover the curated list — this opens the
+                    global ⌘K palette to search every listed stock and coin. */}
+                <button
+                  onClick={openPalette}
+                  title="Search all markets (⌘K)"
+                  aria-label="Search all markets"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface2 text-muted transition-colors hover:text-text"
+                >
+                  <svg
+                    width={14}
+                    height={14}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    aria-hidden="true"
                   >
-                    ✕
-                  </button>
-                )}
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m21 21-4.3-4.3" />
+                  </svg>
+                </button>
               </div>
             </div>
 
             <div className="max-h-[560px] overflow-y-auto p-2 lg:max-h-none lg:min-h-0 lg:flex-1">
               {visible.length === 0 && (
                 <div className="px-3 py-6 text-center text-sm text-muted">
-                  No markets match
-                  {marketQuery ? ` "${marketQuery}"` : " this filter"}.
+                  No markets match this filter.
                 </div>
               )}
               {(["crypto", "forex", "stocks"] as Market[]).map((m) => {
