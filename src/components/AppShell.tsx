@@ -246,8 +246,39 @@ export default function AppShell({
       {mounted && paletteLoaded && <CommandPalette />}
 
       <footer className="mx-auto w-full max-w-[1700px] px-4 pb-8 text-center text-xs text-muted/60 lg:px-6">
-        Data: Binance · Frankfurter (ECB) · Finnhub · CoinGecko · Yahoo · CoinDesk · Cointelegraph
-        · CNBC · MarketWatch · FXStreet. Charts by TradingView. Not investment advice.
+        <p>
+          Data: Binance · Frankfurter (ECB) · Finnhub · CoinGecko · Yahoo · CoinDesk · Cointelegraph
+          · CNBC · MarketWatch · FXStreet. Charts by TradingView. Not investment advice.
+        </p>
+        <p className="mt-2">
+          Built by{" "}
+          <a
+            href="https://olumideb.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-muted/80 underline-offset-2 transition-colors hover:text-text hover:underline"
+          >
+            Olumide Babayemi
+          </a>{" "}
+          ·{" "}
+          <a
+            href="https://github.com/bcypher01"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline-offset-2 transition-colors hover:text-text hover:underline"
+          >
+            GitHub
+          </a>{" "}
+          ·{" "}
+          <a
+            href="https://olumideb.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline-offset-2 transition-colors hover:text-text hover:underline"
+          >
+            Portfolio
+          </a>
+        </p>
       </footer>
     </div>
   );

@@ -10,6 +10,7 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
   IconActivity,
+  IconArrowUpRight,
   IconCalendar,
   IconCandles,
   IconClock,
@@ -28,6 +29,7 @@ interface Slide {
   body: string;
   details: string[];
   where: string;
+  links?: { label: string; href: string }[];
 }
 
 const SLIDES: Slide[] = [
@@ -142,6 +144,24 @@ const SLIDES: Slide[] = [
     ],
     where:
       "Digest: the “Digest ›” button on the “Your day in 60 seconds” card, once you've starred at least one asset. Calendar feed and embed snippet live at the /api/ics and /widget URLs.",
+  },
+  {
+    key: "maker",
+    icon: null, // Logo
+    kicker: "About the developer",
+    title: "Built by Olumide Babayemi",
+    body: "Opentide is free, with no account and no ads — built and maintained by Olumide Babayemi.",
+    details: [
+      "Everything you see is live and free; there's no paywall and nothing is for sale.",
+      "Educational tool only — Opentide is not investment advice.",
+      "Feedback, ideas and bug reports are always welcome.",
+    ],
+    where:
+      "These credits also live in the footer at the bottom of every page.",
+    links: [
+      { label: "GitHub", href: "https://github.com/bcypher01" },
+      { label: "Portfolio", href: "https://olumideb.vercel.app/" },
+    ],
   },
 ];
 
@@ -364,6 +384,26 @@ function AboutModal() {
                               </li>
                             ))}
                           </motion.ul>
+
+                          {s.links && (
+                            <motion.div
+                              variants={itemVariants}
+                              className="mt-4 flex w-full flex-wrap gap-2.5"
+                            >
+                              {s.links.map((l) => (
+                                <a
+                                  key={l.href}
+                                  href={l.href}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-bg/40 px-4 py-2.5 text-sm font-medium text-text/90 transition-colors hover:border-accent/40 hover:text-accent"
+                                >
+                                  {l.label}
+                                  <IconArrowUpRight size={14} />
+                                </a>
+                              ))}
+                            </motion.div>
+                          )}
 
                           <motion.p
                             variants={itemVariants}
