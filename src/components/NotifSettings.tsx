@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import {
   cancelAllNotifs,
   notifPermission,
+  pushConfigured,
   requestNotifPermission,
+  subscribeToPush,
+  syncPushSubscription,
+  unsubscribeFromPush,
+  type PushSyncPayload,
 } from "@/lib/notifications";
 import { useStore } from "@/lib/store";
 import { IconBell } from "./Icons";
@@ -43,21 +48,44 @@ function Toggle({
 }
 
 export default function NotifSettings({ onClose }: Props) {
-  const { notifPrefs, setNotifPrefs } = useStore();
+  const { notifPrefs, setNotifPrefs, watchlist } = useStore();
   const [permission, setPermission] = useState<NotificationPermission>("default");
+  const hasPush = pushConfigured();
 
   useEffect(() => {
     setPermission(notifPermission());
   }, []);
 
+  /** Build the server payload from a set of prefs + current watchlist. */
+  function payloadFrom(prefs: typeof notifPrefs): PushSyncPayload {
+    return {
+      sessionAlerts: prefs.sessionAlerts,
+      calendarAlerts: prefs.calendarAlerts,
+      watchlistAlerts: prefs.watchlistAlerts,
+      leadMinutes: prefs.leadMinutes,
+      watchlist,
+    };
+  }
+
+  /** Update a pref locally and, if subscribed, push the change to the server. */
+  function applyPref(partial: Partial<typeof notifPrefs>) {
+    setNotifPrefs(partial);
+    if (hasPush) void syncPushSubscription(payloadFrom({ ...notifPrefs, ...partial }));
+  }
+
   async function handleToggle(on: boolean) {
     if (on) {
       const p = await requestNotifPermission();
       setPermission(p);
-      if (p === "granted") setNotifPrefs({ enabled: true });
+      if (p === "granted") {
+        const next = { ...notifPrefs, enabled: true };
+        setNotifPrefs({ enabled: true });
+        if (hasPush) void subscribeToPush(payloadFrom(next));
+      }
     } else {
       cancelAllNotifs();
       setNotifPrefs({ enabled: false });
+      if (hasPush) void unsubscribeFromPush();
     }
   }
 
@@ -114,7 +142,7 @@ export default function NotifSettings({ onClose }: Props) {
                     </div>
                     <Toggle
                       checked={notifPrefs.sessionAlerts}
-                      onChange={(v) => setNotifPrefs({ sessionAlerts: v })}
+                      onChange={(v) => applyPref({ sessionAlerts: v })}
                     />
                   </label>
 
@@ -125,9 +153,22 @@ export default function NotifSettings({ onClose }: Props) {
                     </div>
                     <Toggle
                       checked={notifPrefs.calendarAlerts}
-                      onChange={(v) => setNotifPrefs({ calendarAlerts: v })}
+                      onChange={(v) => applyPref({ calendarAlerts: v })}
                     />
                   </label>
+
+                  {hasPush && (
+                    <label className="flex cursor-pointer items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs text-text">Watchlist big moves</p>
+                        <p className="text-[11px] text-muted">When a starred asset moves ≥3% today</p>
+                      </div>
+                      <Toggle
+                        checked={notifPrefs.watchlistAlerts}
+                        onChange={(v) => applyPref({ watchlistAlerts: v })}
+                      />
+                    </label>
+                  )}
                 </div>
 
                 {/* Lead time */}
@@ -137,7 +178,7 @@ export default function NotifSettings({ onClose }: Props) {
                     {LEAD_OPTIONS.map((m) => (
                       <button
                         key={m}
-                        onClick={() => setNotifPrefs({ leadMinutes: m })}
+                        onClick={() => applyPref({ leadMinutes: m })}
                         className={`rounded-lg border py-1.5 text-xs font-medium transition-colors ${
                           notifPrefs.leadMinutes === m
                             ? "border-accent/60 bg-accent/10 text-accent"
@@ -155,7 +196,9 @@ export default function NotifSettings({ onClose }: Props) {
         )}
 
         <p className="mt-4 text-[10px] text-muted/50">
-          In-tab only · no account needed · no data leaves your browser
+          {hasPush
+            ? "No account needed · delivered even when the tab is closed"
+            : "In-tab only · no account needed · no data leaves your browser"}
         </p>
       </div>
     </div>

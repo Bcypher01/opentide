@@ -6,14 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "gen-vapid": "web-push generate-vapid-keys --json"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
     "framer-motion": "^12.40.0",
+    "inngest": "^3.45.0",
     "next": "^15.3.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "web-push": "^3.6.7",
     "zustand": "^5.0.5"
   },
   "devDependencies": {
@@ -21,6 +24,7 @@
     "@types/node": "^22.15.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
+    "@types/web-push": "^3.6.4",
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3"
   },
