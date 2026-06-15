@@ -1,10 +1,13 @@
 // ---------------------------------------------------------------------------
-// notifications.ts — in-tab session and calendar alert scheduling.
+// notifications.ts — alert scheduling, two delivery paths:
 //
-// Strategy: browser Notification API, scheduled via setTimeout when the tab is
-// open. We message the service worker too so it can attempt to fire the
-// notification if the SW is alive (it will be for recently-visited sites).
-// This is entirely $0, no backend, no VAPID keys needed.
+//   1. In-tab  — Notification API scheduled via setTimeout (+ a SW message),
+//                works while the tab/SW is alive. The zero-config fallback.
+//   2. Web Push — when VAPID + a server are configured, the browser registers
+//                a push subscription and the Inngest cron delivers alerts
+//                even when the tab is closed. See subscribeToPush() below.
+//
+// Both are $0; push adds a tiny serverless store (Upstash) + cron.
 // ---------------------------------------------------------------------------
 
 import type { CalendarEvent } from "@/app/api/calendar/route";
@@ -14,6 +17,8 @@ export type NotifPrefs = {
   enabled: boolean;
   sessionAlerts: boolean;
   calendarAlerts: boolean;
+  /** notify when a watchlist asset moves >=3% on the day (push only) */
+  watchlistAlerts: boolean;
   leadMinutes: number;
 };
 
@@ -140,5 +145,125 @@ export function scheduleCalendarAlerts(
     const title = `${e.title} (${e.country}) in ${prefs.leadMinutes} min`;
     const body = e.forecast ? `Forecast: ${e.forecast}` : "High-impact release";
     schedule(title, body, tag, fireAt);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Web Push — closed-tab delivery via the server cron.
+// ---------------------------------------------------------------------------
+const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+
+/** True when the deployment has push wired up (VAPID public key present). */
+export function pushConfigured(): boolean {
+  return Boolean(VAPID_PUBLIC);
+}
+
+/** Browser supports the Push API + service workers. */
+export function pushSupported(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window
+  );
+}
+
+/** VAPID keys are base64url; subscribe() wants the raw bytes as an ArrayBuffer. */
+function urlBase64ToBuffer(base64: string): ArrayBuffer {
+  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+  const b64 = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(b64);
+  const buf = new ArrayBuffer(raw.length);
+  const view = new Uint8Array(buf);
+  for (let i = 0; i < raw.length; i++) view[i] = raw.charCodeAt(i);
+  return buf;
+}
+
+/** What the server needs to target and filter a subscription. */
+export interface PushSyncPayload {
+  sessionAlerts: boolean;
+  calendarAlerts: boolean;
+  watchlistAlerts: boolean;
+  leadMinutes: number;
+  watchlist: string[];
+}
+
+async function postSubscription(
+  subscription: PushSubscription,
+  payload: PushSyncPayload
+): Promise<boolean> {
+  try {
+    const res = await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subscription: subscription.toJSON(),
+        prefs: {
+          sessionAlerts: payload.sessionAlerts,
+          calendarAlerts: payload.calendarAlerts,
+          watchlistAlerts: payload.watchlistAlerts,
+          leadMinutes: payload.leadMinutes,
+        },
+        watchlist: payload.watchlist,
+      }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Ensure a push subscription exists and register it (with prefs + watchlist)
+ * on the server. Safe to call repeatedly. Returns true on success.
+ */
+export async function subscribeToPush(payload: PushSyncPayload): Promise<boolean> {
+  if (!pushConfigured() || !pushSupported()) return false;
+  if (notifPermission() !== "granted") return false;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToBuffer(VAPID_PUBLIC),
+      });
+    }
+    return postSubscription(sub, payload);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Push the latest prefs/watchlist to the server for an EXISTING subscription.
+ * No-op if the user never subscribed. Use this on watchlist/pref changes.
+ */
+export async function syncPushSubscription(payload: PushSyncPayload): Promise<void> {
+  if (!pushConfigured() || !pushSupported()) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) await postSubscription(sub, payload);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Unsubscribe locally and tell the server to drop the record. */
+export async function unsubscribeFromPush(): Promise<void> {
+  if (!pushSupported()) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return;
+    await fetch("/api/push/subscribe", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint: sub.endpoint }),
+    });
+    await sub.unsubscribe();
+  } catch {
+    /* ignore */
   }
 }

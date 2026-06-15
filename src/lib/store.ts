@@ -64,6 +64,8 @@ interface OpentideState {
     enabled: boolean;
     sessionAlerts: boolean;
     calendarAlerts: boolean;
+    /** watchlist >=3% move alerts (push only) */
+    watchlistAlerts: boolean;
     leadMinutes: number;
   };
   setNotifPrefs: (prefs: Partial<OpentideState["notifPrefs"]>) => void;
@@ -134,6 +136,7 @@ export const useStore = create<OpentideState>()(
         enabled: false,
         sessionAlerts: true,
         calendarAlerts: true,
+        watchlistAlerts: false,
         leadMinutes: 15,
       },
       setNotifPrefs: (prefs) =>

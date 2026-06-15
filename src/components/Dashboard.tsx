@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ALL_ASSETS,
   ASSET_BY_ID,
@@ -15,9 +15,14 @@ import type { DerivsPayload } from "@/app/api/derivs/route";
 import type { PulsePayload } from "@/app/api/pulse/route";
 import { timeAgo } from "@/lib/format";
 import { useAwayDiff, useBinanceLive, useNow, usePolling, useServiceWorker } from "@/lib/hooks";
-import { cancelAllNotifs, scheduleCalendarAlerts, scheduleSessionAlerts } from "@/lib/notifications";
+import {
+  cancelAllNotifs,
+  scheduleCalendarAlerts,
+  scheduleSessionAlerts,
+  syncPushSubscription,
+} from "@/lib/notifications";
 import { useOpenChart } from "@/lib/nav";
-import { getAllSessionStates } from "@/lib/sessions";
+import { getAllSessionStates, type SessionId } from "@/lib/sessions";
 import { useStore } from "@/lib/store";
 import AppShell from "./AppShell";
 import DailyBriefing from "./DailyBriefing";
@@ -111,6 +116,20 @@ export default function Dashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notifPrefs, calEvents.length, states]);
 
+  // Keep the server-side push subscription's prefs + watchlist current when
+  // they change outside the settings panel (e.g. starring an asset). No-op if
+  // the user hasn't subscribed or push isn't configured.
+  useEffect(() => {
+    if (!notifPrefs.enabled) return;
+    void syncPushSubscription({
+      sessionAlerts: notifPrefs.sessionAlerts,
+      calendarAlerts: notifPrefs.calendarAlerts,
+      watchlistAlerts: notifPrefs.watchlistAlerts,
+      leadMinutes: notifPrefs.leadMinutes,
+      watchlist,
+    });
+  }, [notifPrefs, watchlist]);
+
   // id -> quote, with live WS ticks layered over REST for crypto
   const quoteOf = useMemo(() => {
     const map: Record<string, Quote> = {};
@@ -123,13 +142,42 @@ export default function Dashboard() {
     return map;
   }, [forex.data, crypto.data, stocks.data, live]);
 
+  // Per-list search (markets card only). Matches symbol or name.
+  const [marketQuery, setMarketQuery] = useState("");
+
+  // Auto-sync the session filter to whichever session is currently open
+  // (e.g. Tokyo open → Tokyo pairs). During overlaps we pick the most recently
+  // opened session (SESSIONS is chronological, so the last open one wins).
+  // Once the user picks/clears a session manually we stop following.
+  const sessionTouched = useRef(false);
+  const primaryOpenSession = useMemo<SessionId | null>(() => {
+    const open = states.filter((s) => s.isOpen);
+    return open.length ? open[open.length - 1].def.id : null;
+  }, [states]);
+
+  useEffect(() => {
+    if (sessionTouched.current) return;
+    if (primaryOpenSession !== sessionFilter) setSessionFilter(primaryOpenSession);
+  }, [primaryOpenSession, sessionFilter, setSessionFilter]);
+
+  const handleSessionSelect = useCallback(
+    (s: SessionId | null) => {
+      sessionTouched.current = true;
+      setSessionFilter(s);
+    },
+    [setSessionFilter]
+  );
+
   const visible = useMemo(() => {
+    const q = marketQuery.trim().toLowerCase();
     return ALL_ASSETS.filter((a) => {
       if (marketFilter !== "all" && a.market !== marketFilter) return false;
       if (sessionFilter && !a.sessions.includes(sessionFilter)) return false;
+      if (q && !(a.symbol.toLowerCase().includes(q) || a.name.toLowerCase().includes(q)))
+        return false;
       return true;
     });
-  }, [marketFilter, sessionFilter]);
+  }, [marketFilter, sessionFilter, marketQuery]);
 
   const byMarket = useMemo(() => {
     const g: Record<Market, AssetDef[]> = { forex: [], crypto: [], stocks: [] };
@@ -210,7 +258,7 @@ export default function Dashboard() {
           states={states}
           useUTC={useUTC}
           selected={sessionFilter}
-          onSelect={setSessionFilter}
+          onSelect={handleSessionSelect}
           calendar={calendar.data}
           calendarLoading={calendar.data === null && !calendar.error}
         />
@@ -285,16 +333,42 @@ export default function Dashboard() {
                 ))}
                 {sessionFilter && (
                   <button
-                    onClick={() => setSessionFilter(null)}
+                    onClick={() => handleSessionSelect(null)}
                     className="min-h-[32px] rounded-full border border-accent/50 bg-accent/10 px-3.5 py-1 text-xs text-accent"
                   >
                     {states.find((s) => s.def.id === sessionFilter)?.def.name} ✕
                   </button>
                 )}
               </nav>
+
+              <div className="relative mt-2">
+                <input
+                  type="text"
+                  value={marketQuery}
+                  onChange={(e) => setMarketQuery(e.target.value)}
+                  placeholder="Search markets…"
+                  aria-label="Search markets"
+                  className="min-h-[32px] w-full rounded-full border border-border bg-surface2 px-3.5 py-1 pr-8 text-xs text-text placeholder:text-muted focus:border-accent/50 focus:outline-none"
+                />
+                {marketQuery && (
+                  <button
+                    onClick={() => setMarketQuery("")}
+                    aria-label="Clear search"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-text"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="max-h-[560px] overflow-y-auto p-2 lg:max-h-none lg:min-h-0 lg:flex-1">
+              {visible.length === 0 && (
+                <div className="px-3 py-6 text-center text-sm text-muted">
+                  No markets match
+                  {marketQuery ? ` "${marketQuery}"` : " this filter"}.
+                </div>
+              )}
               {(["crypto", "forex", "stocks"] as Market[]).map((m) => {
                 const assets = byMarket[m];
                 if (assets.length === 0) return null;
