@@ -146,6 +146,15 @@ export async function claimOnce(
   return res === "OK";
 }
 
+/**
+ * Release a claim made by claimOnce. Call this when delivery did NOT succeed
+ * (transient error) so the next cron run can retry, instead of the alert being
+ * suppressed for the full TTL because the slot was already reserved.
+ */
+export async function releaseClaim(subId: string, tag: string): Promise<void> {
+  await redis("DEL", `push:sent:${subId}:${tag}`);
+}
+
 // ---------------------------------------------------------------------------
 // Delivery
 // ---------------------------------------------------------------------------
