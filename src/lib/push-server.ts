@@ -100,6 +100,17 @@ async function removeSubById(id: string): Promise<void> {
   await redis("HDEL", SUBS_KEY, id);
 }
 
+/** Look up a single stored subscription by its endpoint. */
+export async function getSubByEndpoint(endpoint: string): Promise<StoredSub | null> {
+  const raw = await redis<string | null>("HGET", SUBS_KEY, subIdFor(endpoint));
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as StoredSub;
+  } catch {
+    return null;
+  }
+}
+
 /** All stored subscriptions, paired with their id. */
 export async function allSubs(): Promise<Array<{ id: string; sub: StoredSub }>> {
   // HGETALL returns a flat [field, value, field, value, ...] array.

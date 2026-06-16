@@ -250,6 +250,38 @@ export async function syncPushSubscription(payload: PushSyncPayload): Promise<vo
   }
 }
 
+/** Outcome of a test-push attempt — maps to UI feedback. */
+export type TestPushResult =
+  | "ok"
+  | "unsupported"
+  | "not_subscribed"
+  | "no_subscription"
+  | "push_not_configured"
+  | "error";
+
+/**
+ * Ask the server to deliver one test notification to THIS browser's
+ * subscription. Returns a status that pinpoints where the path breaks.
+ */
+export async function sendTestPush(): Promise<TestPushResult> {
+  if (!pushConfigured() || !pushSupported()) return "unsupported";
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return "not_subscribed";
+    const res = await fetch("/api/push/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint: sub.endpoint }),
+    });
+    if (res.ok) return "ok";
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    return (data.error as TestPushResult) ?? "error";
+  } catch {
+    return "error";
+  }
+}
+
 /** Unsubscribe locally and tell the server to drop the record. */
 export async function unsubscribeFromPush(): Promise<void> {
   if (!pushSupported()) return;
