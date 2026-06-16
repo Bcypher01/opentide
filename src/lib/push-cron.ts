@@ -11,7 +11,7 @@ import "server-only";
 import { ASSET_BY_ID } from "@/lib/assets";
 import type { CalendarEvent, CalendarPayload } from "@/app/api/calendar/route";
 import { getAllSessionStates } from "@/lib/sessions";
-import { allSubs, claimOnce, sendPush } from "@/lib/push-server";
+import { allSubs, claimOnce, releaseClaim, sendPush } from "@/lib/push-server";
 
 const MOVE_THRESHOLD = 3; // percent
 const MAX_LEAD_MS = 60 * 60_000; // never look further than 60 min ahead
@@ -101,6 +101,9 @@ export async function runPushCron(origin: string): Promise<CronResult> {
       const r = await sendPush(id, sub, msg);
       if (r === "ok") sent++;
       else if (r === "gone") pruned++;
+      // Transient failure: release the claim so the next run retries instead
+      // of this alert staying suppressed for the whole TTL (6–26h).
+      else await releaseClaim(id, tag);
     };
 
     // 1) Session opens
