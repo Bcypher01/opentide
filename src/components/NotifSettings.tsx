@@ -6,10 +6,12 @@ import {
   notifPermission,
   pushConfigured,
   requestNotifPermission,
+  sendTestPush,
   subscribeToPush,
   syncPushSubscription,
   unsubscribeFromPush,
   type PushSyncPayload,
+  type TestPushResult,
 } from "@/lib/notifications";
 import { useStore } from "@/lib/store";
 import { IconBell } from "./Icons";
@@ -50,7 +52,26 @@ function Toggle({
 export default function NotifSettings({ onClose }: Props) {
   const { notifPrefs, setNotifPrefs, watchlist } = useStore();
   const [permission, setPermission] = useState<NotificationPermission>("default");
+  const [testing, setTesting] = useState(false);
+  const [testMsg, setTestMsg] = useState<string | null>(null);
   const hasPush = pushConfigured();
+
+  const TEST_FEEDBACK: Record<TestPushResult, string> = {
+    ok: "Sent — check for the notification ✓",
+    unsupported: "This browser can't receive push notifications.",
+    not_subscribed: "Not subscribed yet — toggle alerts off and on.",
+    no_subscription: "Server has no record of this device — re-enable alerts.",
+    push_not_configured: "Push isn't configured on the server.",
+    error: "Couldn't send — check the connection and try again.",
+  };
+
+  async function handleTest() {
+    setTesting(true);
+    setTestMsg(null);
+    const result = await sendTestPush();
+    setTestMsg(TEST_FEEDBACK[result]);
+    setTesting(false);
+  }
 
   useEffect(() => {
     setPermission(notifPermission());
@@ -190,6 +211,22 @@ export default function NotifSettings({ onClose }: Props) {
                     ))}
                   </div>
                 </div>
+
+                {/* Test push — verify the full delivery path on demand */}
+                {hasPush && (
+                  <div className="mt-4 border-t border-border/60 pt-4">
+                    <button
+                      onClick={handleTest}
+                      disabled={testing}
+                      className="w-full rounded-lg border border-accent/60 bg-accent/10 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50"
+                    >
+                      {testing ? "Sending…" : "Send test notification"}
+                    </button>
+                    {testMsg && (
+                      <p className="mt-2 text-[11px] text-muted">{testMsg}</p>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </>
