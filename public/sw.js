@@ -106,6 +106,9 @@ self.addEventListener("push", (event) => {
       icon: "/icon-192.png",
       badge: "/icon-192.png",
       tag: data.tag ?? "opentide",
+      // Re-alert when a notification with the same tag arrives again (e.g.
+      // repeated tests, or an updated alert) instead of silently replacing it.
+      renotify: true,
       data: { url: data.url ?? "/" },
     })
   );
