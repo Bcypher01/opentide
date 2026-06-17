@@ -258,7 +258,7 @@ export default function AppShell({
             rel="noopener noreferrer"
             className="font-medium text-muted/80 underline-offset-2 transition-colors hover:text-text hover:underline"
           >
-            Olumide Babayemi
+            Olumide
           </a>{" "}
           ·{" "}
           <a

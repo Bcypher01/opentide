@@ -149,8 +149,8 @@ const SLIDES: Slide[] = [
     key: "maker",
     icon: null, // Logo
     kicker: "About the developer",
-    title: "Built by Olumide Babayemi",
-    body: "Opentide is free, with no account and no ads — built and maintained by Olumide Babayemi.",
+    title: "Built by Olumide",
+    body: "Opentide is free, with no account and no ads — built and maintained by Olumide.",
     details: [
       "Everything you see is live and free; there's no paywall and nothing is for sale.",
       "Educational tool only — Opentide is not investment advice.",

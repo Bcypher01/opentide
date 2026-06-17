@@ -1,163 +1,395 @@
 "use client";
 
-import { useState } from "react";
-import { ASSET_BY_ID, type Market } from "@/lib/assets";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type { CalendarPayload } from "@/app/api/calendar/route";
+import { ASSET_BY_ID } from "@/lib/assets";
+import { eventCountdown, IMPACT_COLOR, nextHighImpact } from "@/lib/calendar";
 import { timeAgo } from "@/lib/format";
 import { useNow, usePolling } from "@/lib/hooks";
 import { useOpenChart } from "@/lib/nav";
+import {
+  BUCKET_LABEL,
+  BUCKET_ORDER,
+  dayBucket,
+  MARKET_COLOR,
+  NEWS_SOURCES,
+  WEIGHT_META,
+  type DayBucket,
+} from "@/lib/news";
 import AppShell from "@/components/AppShell";
 import { NewsItemSkeleton } from "@/components/DashboardSkeleton";
-import { IconNews } from "@/components/Icons";
+import NewsFilters, {
+  EMPTY_FILTERS,
+  type NewsFilterState,
+} from "@/components/NewsFilters";
+import { IconArrowUpRight, IconCalendar, IconNews } from "@/components/Icons";
 import type { NewsItem } from "@/components/NewsFeed";
 
 interface NewsPayload {
   items: NewsItem[];
   trending: Array<{ id: string; count: number }>;
+  error?: string;
 }
 
-const MARKET_COLOR: Record<Market, string> = {
-  crypto: "#00D4AA",
-  forex: "#4FA8E8",
-  stocks: "#E8B44F",
-};
+// --- URL <-> filter state --------------------------------------------------
+function parseFilters(sp: URLSearchParams): NewsFilterState {
+  const m = sp.get("market");
+  return {
+    market: m === "forex" || m === "crypto" || m === "stocks" ? m : "all",
+    assets: sp.getAll("asset"),
+    sources: sp.getAll("source"),
+    q: sp.get("q") ?? "",
+    sort: sp.get("sort") === "new" ? "new" : "top",
+    highOnly: sp.get("impact") === "high",
+  };
+}
 
-const TABS: Array<{ id: Market | "all"; label: string }> = [
-  { id: "all", label: "All markets" },
-  { id: "forex", label: "Forex" },
-  { id: "crypto", label: "Crypto" },
-  { id: "stocks", label: "Stocks" },
-];
+function buildQuery(f: NewsFilterState): string {
+  const p = new URLSearchParams();
+  if (f.market !== "all") p.set("market", f.market);
+  for (const a of f.assets) p.append("asset", a);
+  for (const s of f.sources) p.append("source", s);
+  if (f.q.trim()) p.set("q", f.q.trim());
+  if (f.sort !== "top") p.set("sort", f.sort);
+  if (f.highOnly) p.set("impact", "high");
+  return p.toString();
+}
 
-const SOURCES = [
-  { name: "CoinDesk", market: "Crypto" },
-  { name: "Cointelegraph", market: "Crypto" },
-  { name: "CNBC Markets", market: "Stocks" },
-  { name: "MarketWatch", market: "Stocks" },
-  { name: "FXStreet", market: "Forex" },
-];
-
-export default function NewsPage() {
+function NewsPageInner() {
   const now = useNow(30_000);
+  const nowMs = now.getTime();
   const openChart = useOpenChart();
   const news = usePolling<NewsPayload>("/api/news", 300_000);
-  const [tab, setTab] = useState<Market | "all">("all");
+  const calendar = usePolling<CalendarPayload>("/api/calendar", 1_800_000);
 
-  const items = (news.data?.items ?? []).filter((it) => tab === "all" || it.market === tab);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [filters, setFilters] = useState<NewsFilterState>(() =>
+    parseFilters(new URLSearchParams(searchParams.toString()))
+  );
+
+  // Reflect filter state into the URL (shareable / bookmarkable views).
+  useEffect(() => {
+    const qs = buildQuery(filters);
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [filters, pathname, router]);
+
+  const patch = (p: Partial<NewsFilterState>) => setFilters((f) => ({ ...f, ...p }));
+  const clear = () => setFilters(EMPTY_FILTERS);
+  const toggleAsset = (id: string) => {
+    setFilters((f) =>
+      f.assets.includes(id)
+        ? { ...f, assets: f.assets.filter((x) => x !== id) }
+        : { ...f, assets: [...f.assets, id] }
+    );
+    // Scroll up only when narrowing the wire (adding), not when clearing.
+    if (typeof window !== "undefined" && !filters.assets.includes(id))
+      window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const all = useMemo(() => news.data?.items ?? [], [news.data]);
   const trending = news.data?.trending ?? [];
+  const maxTrend = trending[0]?.count ?? 1;
+
+  // Global coverage map (how often each asset appears) → ranks row tags.
+  const coverage = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const it of all) for (const id of it.assets) c[id] = (c[id] ?? 0) + 1;
+    return c;
+  }, [all]);
+
+  // Filter
+  const filtered = useMemo(() => {
+    const q = filters.q.trim().toLowerCase();
+    return all.filter((it) => {
+      if (filters.market !== "all" && it.market !== filters.market) return false;
+      if (filters.assets.length && !it.assets.some((id) => filters.assets.includes(id)))
+        return false;
+      if (filters.sources.length && !filters.sources.includes(it.source)) return false;
+      if (filters.highOnly && it.weight !== "high") return false;
+      if (q && !`${it.title} ${it.summary ?? ""}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [all, filters]);
+
+  // Group into time buckets; sort within each by the chosen order.
+  const groups = useMemo(() => {
+    const byBucket: Record<DayBucket, NewsItem[]> = { new: [], today: [], earlier: [] };
+    for (const it of filtered) byBucket[dayBucket(it.ts, nowMs)].push(it);
+    const sortFn = (a: NewsItem, b: NewsItem) =>
+      filters.sort === "new"
+        ? b.ts - a.ts
+        : (b.relevance ?? 0) - (a.relevance ?? 0) || b.ts - a.ts;
+    return BUCKET_ORDER.map((bucket) => ({
+      bucket,
+      items: [...byBucket[bucket]].sort(sortFn),
+    })).filter((g) => g.items.length > 0);
+  }, [filtered, filters.sort, nowMs]);
+
+  const loading = news.data === null;
+  const upcoming = calendar.data?.events
+    ? nextHighImpact(calendar.data.events, nowMs, 3)
+    : [];
 
   return (
     <AppShell>
       <div>
-        <header className="mt-2 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="font-display flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
-              <IconNews size={22} className="text-accent" />
-              Newswire
-            </h1>
-            <p className="mt-1.5 max-w-2xl text-sm text-muted">
-              Five free wires, one stream — every story tagged to the market and assets it
-              affects. Tap an asset tag to chart it.
-            </p>
-          </div>
-          <div className="flex gap-1 rounded-lg border border-border bg-surface p-0.5">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className={`min-h-[32px] rounded-md px-3 py-1 text-xs transition-colors ${
-                  tab === t.id ? "bg-text font-medium text-bg" : "text-muted hover:text-text"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+        <header className="mt-2">
+          <h1 className="font-display flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
+            <IconNews size={22} className="text-accent" />
+            Newswire
+          </h1>
+          <p className="mt-1.5 max-w-2xl text-sm text-muted">
+            Seven free wires, one stream — every story tagged to the markets and assets it
+            affects, and weighted by likely impact. Filter to what you trade; tap an asset to
+            chart it.
+          </p>
         </header>
 
-        <div className="mt-5 grid gap-5 lg:grid-cols-12">
+        {/* Sticky filter bar */}
+        <div className="sticky top-0 z-10 -mx-1 mt-4 rounded-xl border border-border bg-bg/85 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
+          <NewsFilters
+            filters={filters}
+            onChange={patch}
+            onClear={clear}
+            resultCount={filtered.length}
+          />
+        </div>
+
+        {/* Mobile "markets on the wire" strip */}
+        {loading && (
+          <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 xl:hidden">
+            {[64, 56, 72, 52, 60].map((w, i) => (
+              <div
+                key={i}
+                className="skeleton h-[30px] shrink-0 rounded-full"
+                style={{ width: `${w}px` }}
+              />
+            ))}
+          </div>
+        )}
+        {!loading && trending.length > 0 && (
+          <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 xl:hidden">
+            {trending.map(({ id, count }) => {
+              const a = ASSET_BY_ID[id];
+              if (!a) return null;
+              const active = filters.assets.includes(id);
+              return (
+                <button
+                  key={id}
+                  onClick={() => toggleAsset(id)}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
+                    active
+                      ? "border-accent/60 bg-accent/10 text-accent"
+                      : "border-border bg-surface text-muted hover:text-text"
+                  }`}
+                >
+                  {a.symbol}
+                  <span className="num text-[10px] text-muted/70">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="mt-4 grid gap-5 lg:grid-cols-12">
           {/* The wire */}
           <div className="lg:col-span-9">
             <section className="rounded-2xl border border-border bg-surface p-2">
-              {news.data === null && (
+              {loading && (
                 <div className="p-1">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <NewsItemSkeleton
-                      key={i}
-                      titleWidth={["w-2/3", "w-5/6", "w-1/2", "w-3/4"][i % 4]}
-                    />
+                  {[
+                    { rows: 3, w: "w-24" },
+                    { rows: 6, w: "w-16" },
+                  ].map((g, gi) => (
+                    <div key={gi}>
+                      {/* day-group header placeholder */}
+                      <div className="flex items-center gap-2 px-3 pb-1 pt-3">
+                        <div className={`skeleton h-2.5 rounded ${g.w}`} />
+                        <div className="skeleton h-2.5 w-4 rounded" />
+                      </div>
+                      {Array.from({ length: g.rows }).map((_, i) => (
+                        <NewsItemSkeleton
+                          key={i}
+                          titleWidth={["w-2/3", "w-5/6", "w-1/2", "w-3/4"][i % 4]}
+                        />
+                      ))}
+                    </div>
                   ))}
                 </div>
               )}
 
-              {news.error && items.length === 0 && (
+              {news.error && all.length === 0 && (
                 <p className="p-4 text-sm text-muted">
                   Newswire unreachable right now — it retries automatically.
                 </p>
               )}
 
-              {items.map((it, i) => (
-                <article
-                  key={`${it.link}-${i}`}
-                  className="rounded-xl px-3 py-3 transition-colors hover:bg-surface2"
-                >
-                  <a href={it.link} target="_blank" rel="noreferrer" className="block">
-                    <h3 className="text-sm leading-snug text-text">{it.title}</h3>
-                  </a>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
-                    <span
-                      className="inline-block h-1.5 w-1.5 rounded-full"
-                      style={{ backgroundColor: MARKET_COLOR[it.market] }}
-                    />
-                    <span>{it.source}</span>
-                    <span className="num">{timeAgo(it.ts, now.getTime())}</span>
-                    {it.assets.slice(0, 4).map((id) => {
-                      const a = ASSET_BY_ID[id];
-                      if (!a) return null;
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => openChart(id)}
-                          title={`View ${a.symbol} chart`}
-                          className="rounded-full border border-border bg-surface2 px-2 py-0.5 text-[10px] text-muted transition-colors hover:border-accent/50 hover:text-accent"
-                        >
-                          {a.symbol} ↗
-                        </button>
-                      );
-                    })}
+              {!loading && all.length > 0 && filtered.length === 0 && (
+                <div className="p-8 text-center">
+                  <p className="text-sm text-muted">No stories match these filters.</p>
+                  <button
+                    onClick={clear}
+                    className="mt-2 text-xs text-accent transition-colors hover:underline"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              )}
+
+              {groups.map((g) => (
+                <div key={g.bucket}>
+                  <div className="sticky top-[116px] z-[1] flex items-center gap-2 bg-surface/95 px-3 pb-1 pt-3 backdrop-blur">
+                    <h2 className="text-[11px] font-medium uppercase tracking-wider text-muted">
+                      {BUCKET_LABEL[g.bucket]}
+                    </h2>
+                    <span className="num text-[10px] text-muted/60">{g.items.length}</span>
                   </div>
-                </article>
+
+                  {g.items.map((it, i) => {
+                    const weight = it.weight ?? "low";
+                    const ranked = [...it.assets].sort(
+                      (a, b) => (coverage[b] ?? 0) - (coverage[a] ?? 0)
+                    );
+                    return (
+                      <article
+                        key={`${it.link}-${i}`}
+                        className="rounded-xl px-3 py-3 transition-colors hover:bg-surface2"
+                      >
+                        <a href={it.link} target="_blank" rel="noreferrer" className="block">
+                          <h3 className="text-sm leading-snug text-text">{it.title}</h3>
+                        </a>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
+                          <span
+                            className="inline-block h-1.5 w-1.5 rounded-full"
+                            style={{ backgroundColor: MARKET_COLOR[it.market] }}
+                          />
+                          {weight === "high" && (
+                            <span
+                              className="rounded px-1.5 text-[10px] font-medium"
+                              style={{
+                                color: WEIGHT_META.high.color,
+                                backgroundColor:
+                                  "color-mix(in srgb, var(--accent, #00D4AA) 14%, transparent)",
+                              }}
+                            >
+                              High impact
+                            </span>
+                          )}
+                          <span>{it.source}</span>
+                          <span className="num">{timeAgo(it.ts, nowMs)}</span>
+
+                          {ranked.slice(0, 3).map((id) => {
+                            const a = ASSET_BY_ID[id];
+                            if (!a) return null;
+                            const active = filters.assets.includes(id);
+                            const cov = coverage[id] ?? 0;
+                            return (
+                              <span
+                                key={id}
+                                className={`inline-flex items-center overflow-hidden rounded-full border ${
+                                  active
+                                    ? "border-accent/60 bg-accent/10"
+                                    : "border-border bg-surface2"
+                                }`}
+                              >
+                                <button
+                                  onClick={() => toggleAsset(id)}
+                                  title={`Filter the wire to ${a.symbol}`}
+                                  className={`py-0.5 pl-2 pr-1 text-[10px] transition-colors ${
+                                    active ? "text-accent" : "text-muted hover:text-text"
+                                  }`}
+                                >
+                                  {a.symbol}
+                                  {cov > 1 && (
+                                    <span className="num ml-1 text-muted/60">{cov}</span>
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => openChart(id)}
+                                  title={`Chart ${a.symbol}`}
+                                  className="border-l border-border/60 py-0.5 pl-1 pr-1.5 text-[10px] text-muted transition-colors hover:text-accent"
+                                >
+                                  <IconArrowUpRight size={11} />
+                                </button>
+                              </span>
+                            );
+                          })}
+                          {ranked.length > 3 && (
+                            <span className="rounded-full px-1.5 py-0.5 text-[10px] text-muted/60">
+                              +{ranked.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
               ))}
             </section>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-5 lg:col-span-3">
-            <section className="rounded-2xl border border-border bg-surface p-4">
-              <h2 className="font-display text-sm font-semibold">Dominating the wire</h2>
+            <section className="hidden rounded-2xl border border-border bg-surface p-4 xl:block">
+              <h2 className="font-display text-sm font-semibold">Markets on the wire</h2>
               <p className="mt-0.5 text-[11px] text-muted/70">
-                assets with the most coverage in the last 40 stories
+                most-covered assets right now — tap to filter the stream
               </p>
               <div className="mt-3">
-                {trending.length === 0 ? (
+                {loading ? (
+                  <ul className="space-y-1.5">
+                    {[80, 55, 70, 45, 60, 40].map((bar, i) => (
+                      <li key={i} className="flex items-center gap-2 px-2 py-1.5">
+                        <div className="skeleton h-3.5 w-12 rounded" />
+                        <span className="relative h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-surface2">
+                          <span
+                            className="skeleton absolute inset-y-0 left-0 rounded-full"
+                            style={{ width: `${bar}%` }}
+                          />
+                        </span>
+                        <div className="skeleton h-3 w-4 rounded" />
+                      </li>
+                    ))}
+                  </ul>
+                ) : trending.length === 0 ? (
                   <p className="text-xs text-muted">No strong clusters right now.</p>
                 ) : (
-                  <ul className="space-y-1">
+                  <ul className="space-y-1.5">
                     {trending.map(({ id, count }) => {
                       const a = ASSET_BY_ID[id];
                       if (!a) return null;
+                      const active = filters.assets.includes(id);
                       return (
-                        <li key={id}>
+                        <li key={id} className="flex items-center gap-1">
+                          <button
+                            onClick={() => toggleAsset(id)}
+                            className={`group flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors ${
+                              active ? "bg-accent/10" : "hover:bg-surface2"
+                            }`}
+                          >
+                            <span
+                              className={`text-sm font-medium ${active ? "text-accent" : ""}`}
+                            >
+                              {a.symbol}
+                            </span>
+                            <span className="relative h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-surface2">
+                              <span
+                                className="absolute inset-y-0 left-0 rounded-full bg-accent/50"
+                                style={{ width: `${Math.round((count / maxTrend) * 100)}%` }}
+                              />
+                            </span>
+                            <span className="num text-[10px] text-muted">{count}</span>
+                          </button>
                           <button
                             onClick={() => openChart(id)}
-                            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface2"
+                            title={`Chart ${a.symbol}`}
+                            className="shrink-0 rounded-md p-1 text-muted transition-colors hover:text-accent"
                           >
-                            <span className="text-sm font-medium">{a.symbol}</span>
-                            <span className="min-w-0 flex-1 truncate text-xs text-muted">
-                              {a.name}
-                            </span>
-                            <span className="num rounded-full bg-surface2 px-2 py-0.5 text-[10px] text-muted">
-                              {count}
-                            </span>
+                            <IconArrowUpRight size={13} />
                           </button>
                         </li>
                       );
@@ -167,29 +399,85 @@ export default function NewsPage() {
               </div>
             </section>
 
+            {/* Phase 4 — upcoming high-impact events */}
+            {upcoming.length > 0 && (
+              <section className="rounded-2xl border border-border bg-surface p-4">
+                <h2 className="font-display flex items-center gap-2 text-sm font-semibold">
+                  <IconCalendar size={15} className="text-muted" />
+                  Coming up
+                </h2>
+                <p className="mt-0.5 text-[11px] text-muted/70">
+                  next high-impact economic releases
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {upcoming.map((e) => (
+                    <li key={e.id} className="flex items-center gap-2 text-xs">
+                      <span
+                        aria-hidden
+                        className="inline-block h-2 w-2 shrink-0 rotate-45 rounded-[2px]"
+                        style={{ backgroundColor: IMPACT_COLOR[e.impact] }}
+                      />
+                      <span className="min-w-0 flex-1 truncate text-text">
+                        {e.title}
+                        <span className="ml-1 text-muted/70">{e.country}</span>
+                      </span>
+                      <span className="num shrink-0 text-accent">
+                        {eventCountdown(e.ts, nowMs)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
             <section className="rounded-2xl border border-border bg-surface p-4">
               <h2 className="font-display text-sm font-semibold">Sources</h2>
               <p className="mt-0.5 text-[11px] text-muted/70">
-                free public wires, refreshed every 10 minutes
+                free public wires, refreshed every 10 minutes — tap to filter
               </p>
-              <ul className="mt-3 space-y-1.5">
-                {SOURCES.map((s) => (
-                  <li key={s.name} className="flex items-center justify-between text-xs">
-                    <span>{s.name}</span>
-                    <span className="text-muted/70">{s.market}</span>
-                  </li>
-                ))}
+              <ul className="mt-3 space-y-1">
+                {NEWS_SOURCES.map((s) => {
+                  const on = filters.sources.includes(s.name);
+                  return (
+                    <li key={s.name}>
+                      <button
+                        onClick={() =>
+                          patch({
+                            sources: on
+                              ? filters.sources.filter((x) => x !== s.name)
+                              : [...filters.sources, s.name],
+                          })
+                        }
+                        className={`flex w-full items-center justify-between rounded-lg px-2 py-1 text-xs transition-colors hover:bg-surface2 ${
+                          on ? "text-accent" : ""
+                        }`}
+                      >
+                        <span>{s.name}</span>
+                        <span className="text-muted/70">{s.market}</span>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
 
             <section className="rounded-2xl border border-border bg-surface p-4 text-xs leading-relaxed text-muted">
-              <span className="font-medium text-text">How tagging works.</span> Each headline is
-              scanned for asset names, tickers and central-bank keywords, then tagged to the
-              markets it touches. Tags are heuristic — read the story before acting on it.
+              <span className="font-medium text-text">How tagging &amp; impact work.</span> Each
+              headline is scanned for asset names, tickers and central-bank keywords, then tagged
+              to the markets it touches and scored for likely impact (macro keywords, breadth and
+              cross-source coverage). Both are heuristic — read the story before acting on it.
             </section>
           </div>
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function NewsPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewsPageInner />
+    </Suspense>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ASSET_BY_ID, type Market } from "@/lib/assets";
 import { timeAgo } from "@/lib/format";
+import { MARKET_COLOR, type NewsWeight } from "@/lib/news";
 import { NewsItemSkeleton } from "./DashboardSkeleton";
 
 export interface NewsItem {
@@ -12,6 +13,9 @@ export interface NewsItem {
   market: Market;
   assets: string[];
   ts: number;
+  summary?: string;
+  relevance?: number;
+  weight?: NewsWeight;
 }
 
 interface Props {
@@ -25,12 +29,6 @@ interface Props {
   /** optional footer node (e.g. "All news →" link) */
   footer?: React.ReactNode;
 }
-
-const MARKET_COLOR: Record<Market, string> = {
-  crypto: "#00D4AA",
-  forex: "#4FA8E8",
-  stocks: "#E8B44F",
-};
 
 const TABS: Array<{ id: Market | "all"; label: string }> = [
   { id: "all", label: "All" },
@@ -92,7 +90,10 @@ export default function NewsFeed({
         )}
 
         {visible.map((it, i) => (
-          <article key={`${it.link}-${i}`} className="rounded-lg px-2 py-2.5 transition-colors hover:bg-surface2">
+          <article
+            key={`${it.link}-${i}`}
+            className="rounded-lg px-2 py-2.5 transition-colors hover:bg-surface2"
+          >
             <a href={it.link} target="_blank" rel="noreferrer" className="block">
               <h3 className="text-[13px] leading-snug text-text">{it.title}</h3>
             </a>
