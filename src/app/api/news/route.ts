@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { tagAssets, type Market } from "@/lib/assets";
+import { tagAssets, impactKeywordHits, type Market } from "@/lib/assets";
 
 // ---------------------------------------------------------------------------
 // Free news engine: public RSS feeds (no keys, no rate limits), parsed with a
@@ -22,6 +22,8 @@ const FEEDS: Array<{ url: string; source: string; market: Market }> = [
   { url: "https://www.cnbc.com/id/10000664/device/rss/rss.html", source: "CNBC FX", market: "forex" },
 ];
 
+export type NewsWeight = "high" | "med" | "low";
+
 export interface NewsItem {
   title: string;
   link: string;
@@ -29,6 +31,9 @@ export interface NewsItem {
   market: Market;
   assets: string[]; // tagged asset ids
   ts: number;
+  summary?: string; // short plain-text blurb for search + preview
+  relevance: number; // 0–1 heuristic importance score
+  weight: NewsWeight; // bucketed relevance — the FF "impact" analogue
 }
 
 /** Numeric entities, hex (&#x2019;) and decimal (&#8217;) — covers smart
@@ -84,6 +89,11 @@ function parseFeed(xml: string, source: string, market: Market): NewsItem[] {
       market,
       assets: tagAssets(`${title} ${summary}`),
       ts,
+      summary: summary.slice(0, 220),
+      // relevance/weight are filled in once the full set is known (GET) so we
+      // can factor in cross-source coverage bursts.
+      relevance: 0,
+      weight: "low",
     });
   }
   return out;
@@ -120,6 +130,24 @@ export async function GET() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
     .map(([id, count]) => ({ id, count }));
+
+  // Relevance / impact weighting (the ForexFactory "impact" analogue). All
+  // signals are already on hand — no extra fetches. Heuristic by design; the
+  // UI keeps the "read the story" disclaimer.
+  const scoredAt = Date.now();
+  for (const it of items) {
+    const kw = impactKeywordHits(`${it.title} ${it.summary ?? ""}`);
+    let score = 0;
+    if (kw >= 2) score += 0.55; // multi-signal macro headline → red folder
+    else if (kw === 1) score += 0.38;
+    score += Math.min(it.assets.length, 5) * 0.06; // breadth, ≤0.30
+    const maxCov = it.assets.reduce((m, id) => Math.max(m, counts[id] ?? 0), 0);
+    score += Math.min(maxCov, 8) * 0.035; // cross-source coverage burst, ≤0.28
+    const ageH = Math.max(0, (scoredAt - it.ts) / 3_600_000);
+    score += Math.max(0, 1 - ageH / 18) * 0.18; // recency, ≤0.18
+    it.relevance = Math.min(1, Math.round(score * 100) / 100);
+    it.weight = it.relevance >= 0.6 ? "high" : it.relevance >= 0.33 ? "med" : "low";
+  }
 
   if (items.length === 0) {
     return NextResponse.json(

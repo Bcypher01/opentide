@@ -137,3 +137,64 @@ export function tagAssets(text: string): string[] {
   }
   return ids;
 }
+
+/**
+ * High-impact macro vocabulary — the headlines that actually move markets
+ * (central banks, rate decisions, inflation/jobs prints, systemic risk).
+ * Used to weight news relevance, the ForexFactory "red folder" analogue.
+ * Lowercase; matched as substrings against title + summary.
+ */
+export const HIGH_IMPACT_KEYWORDS: string[] = [
+  // central banks / policy
+  "federal reserve",
+  "the fed",
+  "fomc",
+  "rate decision",
+  "rate hike",
+  "rate cut",
+  "interest rate",
+  "basis point",
+  "ecb",
+  "european central bank",
+  "bank of england",
+  "bank of japan",
+  "boj",
+  "powell",
+  "lagarde",
+  "monetary policy",
+  "quantitative",
+  // macro prints
+  "inflation",
+  "cpi",
+  "ppi",
+  "pce",
+  "nonfarm",
+  "non-farm",
+  "payrolls",
+  "jobs report",
+  "unemployment",
+  "gdp",
+  "recession",
+  // systemic / cross-asset shocks
+  "tariff",
+  "default",
+  "downgrade",
+  "sanction",
+  "central bank",
+];
+
+/**
+ * Count distinct high-impact keyword hits in a headline (+summary).
+ * Capped at 3 so a single keyword-stuffed story can't dominate.
+ */
+export function impactKeywordHits(text: string): number {
+  const lower = ` ${text.toLowerCase()} `;
+  let n = 0;
+  for (const kw of HIGH_IMPACT_KEYWORDS) {
+    if (lower.includes(kw)) {
+      n += 1;
+      if (n >= 3) break;
+    }
+  }
+  return n;
+}
