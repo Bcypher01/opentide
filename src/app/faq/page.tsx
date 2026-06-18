@@ -30,13 +30,13 @@ export default function FaqPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <article className="mx-auto w-full max-w-2xl pb-16">
+      <article className="max-w-4xl pb-16">
         <header className="mt-2">
           <h1 className="font-display flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
             <IconHelp size={22} className="text-accent" />
             Sessions &amp; FAQ
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-muted">
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
             Opentide is a free market companion built around{" "}
             <strong className="font-medium text-text">trading sessions</strong>. A live
             session clock shows which of the four major forex centres are open right now,
