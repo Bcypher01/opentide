@@ -24,6 +24,7 @@ const NAV = [
   { href: "/pulse", label: "Pulse" },
   { href: "/buzz", label: "Buzz" },
   { href: "/news", label: "News" },
+  { href: "/faq", label: "FAQ" },
 ];
 
 export default function AppShell({
