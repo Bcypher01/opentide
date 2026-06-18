@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
+import { IconArrowUpRight, IconChevronDown, IconClock, IconHelp } from "@/components/Icons";
 import { FAQ, faqJsonLd } from "@/lib/faq";
 
 const DESCRIPTION =
@@ -29,52 +30,93 @@ export default function FaqPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <article className="mx-auto w-full max-w-[760px] pb-12">
-        <header>
-          <h1 className="text-2xl font-medium text-text">
-            Market sessions, overlaps and trading hours
+      <article className="mx-auto w-full max-w-2xl pb-16">
+        <header className="mt-2">
+          <h1 className="font-display flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
+            <IconHelp size={22} className="text-accent" />
+            Sessions &amp; FAQ
           </h1>
-          <p className="mt-3 text-sm leading-relaxed text-muted">
+          <p className="mt-2 text-sm leading-relaxed text-muted">
             Opentide is a free market companion built around{" "}
             <strong className="font-medium text-text">trading sessions</strong>. A live
-            session clock shows which of the four major forex centres — Sydney, Tokyo,
-            London and New York — are open right now, where their hours overlap, and how
-            much time is left in each, in your local time or UTC. Forex, crypto and US
-            stocks share one surface, every headline in the newswire is tagged to the
-            markets it moves, and there is no signup and no API keys.
-          </p>
-          <p className="mt-3 text-sm leading-relaxed text-muted">
-            The sessions run on local business hours in their home cities, so the markets
-            hand off around the clock: Sydney and Tokyo cover the Asian session, London
-            opens Europe, and New York carries the US session. The{" "}
-            <strong className="font-medium text-text">London–New York overlap</strong> —
-            the London afternoon into the New York morning, roughly 13:00–17:00 UTC — is
-            the deepest-liquidity window of the day, when spreads tighten and major pairs
-            see their heaviest volume.
+            session clock shows which of the four major forex centres are open right now,
+            where their hours overlap, and how much time is left — in your local time or
+            UTC. Forex, crypto and US stocks share one surface, every headline is tagged to
+            the markets it moves, and there&apos;s no signup and no API keys.
           </p>
         </header>
 
+        {/* Session-times reference card — the core concept, scannable at a glance */}
+        <section
+          aria-labelledby="sessions-heading"
+          className="mt-8 rounded-2xl border border-border bg-surface p-5"
+        >
+          <h2
+            id="sessions-heading"
+            className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted"
+          >
+            <IconClock size={14} className="text-accent" />
+            The four major sessions
+          </h2>
+          <dl className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {[
+              { city: "Sydney", hours: "08:00–17:00", zone: "AEST / AEDT" },
+              { city: "Tokyo", hours: "09:00–18:00", zone: "JST" },
+              { city: "London", hours: "08:00–17:00", zone: "GMT / BST" },
+              { city: "New York", hours: "08:00–17:00", zone: "ET" },
+            ].map((s) => (
+              <div
+                key={s.city}
+                className="flex items-baseline justify-between gap-3 rounded-lg bg-surface2 px-3.5 py-2.5"
+              >
+                <dt className="text-sm font-medium text-text">{s.city}</dt>
+                <dd className="text-right">
+                  <span className="num text-sm text-text">{s.hours}</span>
+                  <span className="ml-2 text-xs text-muted">{s.zone}</span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-4 text-xs leading-relaxed text-muted">
+            Each session runs on local business hours, so the equivalent UTC times shift
+            with daylight saving. The{" "}
+            <strong className="font-medium text-text">London–New York overlap</strong>{" "}
+            (London afternoon into the New York morning, ~13:00–17:00 UTC) is the
+            deepest-liquidity window of the day.
+          </p>
+        </section>
+
+        {/* Accordion */}
         <section aria-labelledby="faq-heading" className="mt-10">
-          <h2 id="faq-heading" className="text-lg font-medium text-text">
+          <h2 id="faq-heading" className="font-display text-lg font-semibold tracking-tight text-text">
             Frequently asked questions
           </h2>
-          <div className="mt-4 divide-y divide-border rounded-2xl border border-border bg-surface">
+          <div className="mt-4 space-y-2.5">
             {FAQ.map(({ q, a }) => (
-              <details key={q} className="group px-4 py-3">
-                <summary className="cursor-pointer list-none text-sm font-medium text-text marker:content-none">
+              <details
+                key={q}
+                className="group rounded-2xl border border-border bg-surface transition-colors open:bg-surface2 hover:border-border/80"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-sm font-medium text-text marker:content-none [&::-webkit-details-marker]:hidden">
                   {q}
+                  <IconChevronDown
+                    size={16}
+                    className="shrink-0 text-muted transition-transform duration-200 group-open:rotate-180"
+                  />
                 </summary>
-                <p className="mt-2 text-sm leading-relaxed text-muted">{a}</p>
+                <p className="px-5 pb-4 text-sm leading-relaxed text-muted">{a}</p>
               </details>
             ))}
           </div>
         </section>
 
-        <p className="mt-8 text-sm text-muted">
-          <Link href="/" className="text-accent hover:underline">
-            ← Back to the dashboard
-          </Link>
-        </p>
+        <Link
+          href="/"
+          className="mt-10 inline-flex items-center gap-1.5 text-sm text-accent transition-colors hover:text-text"
+        >
+          Open the dashboard
+          <IconArrowUpRight size={15} />
+        </Link>
       </article>
     </AppShell>
   );
