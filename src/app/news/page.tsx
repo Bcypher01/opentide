@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { CalendarPayload } from "@/app/api/calendar/route";
 import { ASSET_BY_ID } from "@/lib/assets";
@@ -134,6 +134,33 @@ function NewsPageInner() {
     ? nextHighImpact(calendar.data.events, nowMs, 3)
     : [];
 
+  // The filter bar and the day-group headers stack as two sticky layers under
+  // the global app header. The filter bar's height changes when active-filter
+  // chips appear, so a hard-coded offset would leave a gap (or overlap). Stick
+  // the filter bar just below the app header, and drive the group-header offset
+  // from the filter bar's measured height so they're always flush.
+  const filterBarRef = useRef<HTMLDivElement>(null);
+  const [headerH, setHeaderH] = useState(56);
+  const [groupTop, setGroupTop] = useState(116);
+  useEffect(() => {
+    const filterEl = filterBarRef.current;
+    if (!filterEl) return;
+    const measure = () => {
+      const appHeader = document.querySelector("header.sticky") as HTMLElement | null;
+      const hh = appHeader?.offsetHeight ?? 56;
+      setHeaderH(hh);
+      setGroupTop(hh + filterEl.offsetHeight);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(filterEl);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [loading]);
+
   return (
     <AppShell>
       <div>
@@ -149,8 +176,12 @@ function NewsPageInner() {
           </p>
         </header>
 
-        {/* Sticky filter bar */}
-        <div className="sticky top-0 z-10 -mx-1 mt-4 rounded-xl border border-border bg-bg/85 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
+        {/* Sticky filter bar — pinned just below the global app header */}
+        <div
+          ref={filterBarRef}
+          style={{ top: headerH }}
+          className="sticky z-10 -mx-1 mt-4 rounded-xl border border-border bg-bg/85 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-bg/70"
+        >
           <NewsFilters
             filters={filters}
             onChange={patch}
@@ -242,7 +273,10 @@ function NewsPageInner() {
 
               {groups.map((g) => (
                 <div key={g.bucket}>
-                  <div className="sticky top-[116px] z-[1] flex items-center gap-2 bg-surface/95 px-3 pb-1 pt-3 backdrop-blur">
+                  <div
+                    style={{ top: groupTop }}
+                    className="sticky z-[1] flex items-center gap-2 bg-surface/95 px-3 pb-1 pt-3 backdrop-blur"
+                  >
                     <h2 className="text-[11px] font-medium uppercase tracking-wider text-muted">
                       {BUCKET_LABEL[g.bucket]}
                     </h2>
