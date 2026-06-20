@@ -19,6 +19,7 @@ import {
 } from "@/lib/news";
 import AppShell from "@/components/AppShell";
 import { NewsItemSkeleton } from "@/components/DashboardSkeleton";
+import Explain from "@/components/Explain";
 import NewsFilters, {
   EMPTY_FILTERS,
   type NewsFilterState,
@@ -357,6 +358,17 @@ function NewsPageInner() {
                               +{ranked.length - 3}
                             </span>
                           )}
+
+                          <Explain
+                            className="w-full"
+                            target={{
+                              kind: "headline",
+                              title: it.title,
+                              source: it.source,
+                              market: it.market,
+                              assets: ranked.slice(0, 3),
+                            }}
+                          />
                         </div>
                       </article>
                     );
