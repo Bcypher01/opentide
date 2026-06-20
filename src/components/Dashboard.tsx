@@ -24,6 +24,7 @@ import {
 import { useOpenChart } from "@/lib/nav";
 import { getAllSessionStates, type SessionId } from "@/lib/sessions";
 import { useStore } from "@/lib/store";
+import AiInsights from "./AiInsights";
 import AppShell from "./AppShell";
 import DailyBriefing from "./DailyBriefing";
 import DashboardSkeleton from "./DashboardSkeleton";
@@ -166,6 +167,23 @@ export default function Dashboard() {
     [setSessionFilter]
   );
 
+  // AI insights now sit below the session clock — well above the chart — so a
+  // tap must bring the chart into view on every screen size (openChart only
+  // auto-scrolls on mobile). rAF lets the asset switch paint before we scroll.
+  const openChartAndScroll = useCallback(
+    (id: string) => {
+      openChart(id);
+      if (typeof document !== "undefined") {
+        requestAnimationFrame(() =>
+          document
+            .getElementById("chart")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" })
+        );
+      }
+    },
+    [openChart]
+  );
+
   const visible = useMemo(() => {
     return ALL_ASSETS.filter((a) => {
       if (marketFilter !== "all" && a.market !== marketFilter) return false;
@@ -243,7 +261,7 @@ export default function Dashboard() {
         onSelectAsset={openChart}
       />
 
-      {/* Market pulse: sentiment + macro strip (full read on /pulse) */}
+      {/* Market pulse: sentiment + macro strip (full read on /markets) */}
       <PulseStrip data={pulse.data} />
 
       {/* Session clock — with economic calendar markers + countdowns */}
@@ -259,6 +277,10 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* AI insights: actionable recommendations from live market context.
+          Self-hides when no LLM key is configured. Taps scroll to the chart. */}
+      <AiInsights onSelectAsset={openChartAndScroll} />
+
       {/* Top movers */}
       <Movers quoteOf={quoteOf} onSelect={openChart} />
 
@@ -271,11 +293,21 @@ export default function Dashboard() {
             pinned to the chart card's height and the markets list flex-fills
             the remainder, so it never extends past the chart. */}
         <div className="flex flex-col gap-5 lg:col-span-4 lg:h-[604px] xl:col-span-3">
-          {/* Watchlist */}
+          {/* Watchlist — a lane here; the full destination lives at /watchlist */}
           <section className="shrink-0 rounded-2xl border border-border bg-surface p-2">
-            <h2 className="px-3 pb-1 pt-2 text-xs font-medium uppercase tracking-wider text-muted">
-              Watchlist
-            </h2>
+            <div className="flex items-baseline justify-between px-3 pb-1 pt-2">
+              <h2 className="text-xs font-medium uppercase tracking-wider text-muted">
+                Watchlist
+              </h2>
+              {watched.length > 0 && (
+                <Link
+                  href="/watchlist"
+                  className="text-[11px] text-accent transition-colors hover:underline"
+                >
+                  View all →
+                </Link>
+              )}
+            </div>
             {watched.length === 0 ? (
               <div className="px-3 pb-3 pt-1 text-sm text-muted">
                 Star anything to pin it here. Try:

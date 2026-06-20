@@ -20,9 +20,15 @@ const EXEMPT_PREFIXES = ["/api/inngest"];
 // Expensive routes that reach large upstream universes / heavy computation.
 const STRICT_PREFIXES = ["/api/search", "/api/sessionstats"];
 
+// AI routes hit a quota-limited LLM upstream — kept on the tightest per-IP
+// budget so one client can't burn the shared free-tier quota. (The route also
+// serves a 10-min shared cache; see app/api/recommendations/route.ts.)
+const AI_PREFIXES = ["/api/recommendations", "/api/explain"];
+
 // Budgets (requests per window, per IP).
 const DEFAULT_LIMIT = 60;
 const STRICT_LIMIT = 20;
+const AI_LIMIT = 10;
 const WINDOW_SECONDS = 60;
 
 /** Best-effort client IP from the usual proxy headers (Vercel sets these). */
@@ -39,9 +45,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const strict = STRICT_PREFIXES.some((p) => pathname.startsWith(p));
-  const limit = strict ? STRICT_LIMIT : DEFAULT_LIMIT;
-  const bucket = strict ? "api-strict" : "api-default";
+  // Pick the tightest matching budget: AI < strict < default.
+  let limit = DEFAULT_LIMIT;
+  let bucket = "api-default";
+  if (AI_PREFIXES.some((p) => pathname.startsWith(p))) {
+    limit = AI_LIMIT;
+    bucket = "api-ai";
+  } else if (STRICT_PREFIXES.some((p) => pathname.startsWith(p))) {
+    limit = STRICT_LIMIT;
+    bucket = "api-strict";
+  }
 
   const ip = clientIp(req);
   const result = await rateLimit(ip, { limit, windowSeconds: WINDOW_SECONDS, bucket });

@@ -3,6 +3,7 @@
 import { ALL_ASSETS, type AssetDef } from "@/lib/assets";
 import { formatChangePct, formatPrice } from "@/lib/format";
 import { MoverCardSkeleton } from "./DashboardSkeleton";
+import Explain from "./Explain";
 import { IconTrendingUp } from "./Icons";
 
 interface Quote {
@@ -51,25 +52,43 @@ export default function Movers({ quoteOf, onSelect }: Props) {
         </h2>
         <span className="text-xs text-muted">biggest moves across all three markets</span>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {movers.map(({ a, q }) => {
           const up = q.changePct >= 0;
           return (
-            <button
+            // A card (not a button) so it can host both the tap-to-chart area
+            // and an inline Explain affordance without nesting buttons.
+            <div
               key={a.id}
-              onClick={() => onSelect(a.id)}
-              className="group rounded-xl border border-border bg-surface p-3 text-left transition-all hover:-translate-y-0.5 hover:border-accent/40"
-              title={`View ${a.symbol} chart`}
+              className="flex flex-col rounded-xl border border-border bg-surface p-3 transition-colors hover:border-accent/40"
             >
-              <div className="flex items-center justify-between gap-1">
-                <span className="truncate text-xs font-medium">{a.symbol}</span>
-                <span className={`num text-xs ${up ? "text-bull" : "text-bear"}`}>
-                  {up ? "▲" : "▼"} {formatChangePct(q.changePct)}
-                </span>
-              </div>
-              <div className="num mt-1.5 text-sm">{formatPrice(q.price, a.market)}</div>
-              <div className="mt-0.5 truncate text-[11px] text-muted">{a.name}</div>
-            </button>
+              <button
+                onClick={() => onSelect(a.id)}
+                className="text-left"
+                title={`View ${a.symbol} chart`}
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span className="truncate text-xs font-medium">{a.symbol}</span>
+                  <span className={`num text-xs ${up ? "text-bull" : "text-bear"}`}>
+                    {up ? "▲" : "▼"} {formatChangePct(q.changePct)}
+                  </span>
+                </div>
+                <div className="num mt-1.5 text-sm">{formatPrice(q.price, a.market)}</div>
+                <div className="mt-0.5 truncate text-[11px] text-muted">{a.name}</div>
+              </button>
+
+              <Explain
+                className="mt-2"
+                label="Why?"
+                target={{
+                  kind: "mover",
+                  symbol: a.symbol,
+                  name: a.name,
+                  market: a.market,
+                  changePct: Number(q.changePct.toFixed(2)),
+                }}
+              />
+            </div>
           );
         })}
       </div>
