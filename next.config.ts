@@ -99,6 +99,15 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+
+  // The former Pulse and Buzz tabs were merged into a single "Markets"
+  // destination (Mood + Attention bands). Keep their deep-links stable.
+  async redirects() {
+    return [
+      { source: "/pulse", destination: "/markets", permanent: true },
+      { source: "/buzz", destination: "/markets", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

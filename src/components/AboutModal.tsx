@@ -73,7 +73,7 @@ const SLIDES: Slide[] = [
       "Prices flash green or red as they tick, and Top movers updates live.",
     ],
     where:
-      "Left column of the dashboard — watchlist on top, all markets below it. Top movers sit just above the columns.",
+      "Left column of the dashboard — watchlist on top, all markets below it. The Watchlist tab opens the full view: live prices, AI ideas tuned to your picks, and news filtered to your names.",
   },
   {
     key: "chart",
@@ -92,16 +92,16 @@ const SLIDES: Slide[] = [
   {
     key: "news",
     icon: IconNews,
-    kicker: "Newswire & Buzz",
+    kicker: "Newswire & attention",
     title: "See what's moving — and why",
     body: "A free multi-source newswire, tagged to the exact assets each story affects.",
     details: [
       "Sources include CoinDesk, CNBC, MarketWatch and FXStreet — merged and de-duplicated.",
       "Tap an asset tag on any headline to jump straight to its chart.",
-      "Buzz ranks what the market is talking about most right now.",
+      "The Markets page ranks what the market is talking about most right now.",
     ],
     where:
-      "Right column of the dashboard. The full wire lives on the News page; trends on the Buzz page.",
+      "Right column of the dashboard. The full wire lives on the News page; what's getting attention lives in the Markets page's Attention band.",
   },
   {
     key: "briefing",
@@ -118,18 +118,18 @@ const SLIDES: Slide[] = [
       "The sun card at the very top of the dashboard. Educational, not investment advice.",
   },
   {
-    key: "pulse",
+    key: "markets",
     icon: IconActivity,
-    kicker: "Pulse",
-    title: "Take the market's pulse",
-    body: "A dedicated page for the deeper, cross-market read: risk regime, market heat, and how each asset behaves by session.",
+    kicker: "Markets",
+    title: "Mood and attention, one page",
+    body: "The whole board in one destination — how markets feel right now (Mood), and what they're watching (Attention).",
     details: [
-      "Risk dial — one risk-on / risk-off score synthesized from crypto, equities, both Fear & Greed readings and the dollar, with every input shown.",
-      "Heatmaps — scan crypto and stocks by 24h move, or read live currency strength across the major forex pairs.",
-      "Session stats — how each asset usually moves during London, New York, Tokyo and Sydney, versus what today has done so far.",
+      "Mood — a risk-on / risk-off dial synthesized from crypto, equities, both Fear & Greed readings and the dollar, plus heatmaps and per-session stats.",
+      "Attention — the trending coins and stocks, the names dominating the news, scheduled event risk and upcoming IPOs.",
+      "Tap anything to chart it; composites and attention, never buy signals.",
     ],
     where:
-      "The Pulse tab in the nav, top-left. The dashboard's “Market pulse” strip is the teaser; this page is the full read.",
+      "The Markets tab in the nav, top-left. The dashboard's “Market pulse” strip is the teaser; this page is the full read.",
   },
   {
     key: "tools",
