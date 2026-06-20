@@ -1,6 +1,7 @@
 "use client";
 
 import type { DerivsPayload } from "@/app/api/derivs/route";
+import Explain from "./Explain";
 
 interface Props {
   data: DerivsPayload | null;
@@ -61,31 +62,46 @@ export default function DerivsPanel({ data, onSelect }: Props) {
         </span>
       </div>
 
-      <div className="scrollbar-none flex gap-2 overflow-x-auto">
+      {/* Funding extremes — each pill taps to chart and carries an inline
+          Explain. Wrapped (not scrolled) so an opened explanation reflows
+          cleanly instead of distorting a horizontal row. */}
+      <div className="flex flex-wrap items-start gap-2">
         {extremes.map((f) => {
           const crowdedLongs = f.rate > 0;
           return (
-            <button
-              key={f.symbol}
-              onClick={() => onSelect(`crypto:${f.symbol}`)}
-              title={`${f.symbol} perp funding rate — ${
-                crowdedLongs ? "longs pay shorts" : "shorts pay longs"
-              }. Tap to chart.`}
-              className="flex shrink-0 items-baseline gap-2 rounded-full border border-border bg-surface px-3.5 py-1.5 transition-colors hover:border-accent/40"
-            >
-              <span className="text-xs font-medium">{f.symbol}</span>
-              <span
-                className={`num text-xs ${crowdedLongs ? "text-bull" : "text-bear"}`}
+            <div key={f.symbol} className="flex flex-col">
+              <button
+                onClick={() => onSelect(`crypto:${f.symbol}`)}
+                title={`${f.symbol} perp funding rate — ${
+                  crowdedLongs ? "longs pay shorts" : "shorts pay longs"
+                }. Tap to chart.`}
+                className="flex shrink-0 items-baseline gap-2 rounded-full border border-border bg-surface px-3.5 py-1.5 transition-colors hover:border-accent/40"
               >
-                {fmtFunding(f.rate)}
-              </span>
-              <span className="text-[10px] text-muted">
-                {crowdedLongs ? "longs pay" : "shorts pay"}
-              </span>
-            </button>
+                <span className="text-xs font-medium">{f.symbol}</span>
+                <span
+                  className={`num text-xs ${crowdedLongs ? "text-bull" : "text-bear"}`}
+                >
+                  {fmtFunding(f.rate)}
+                </span>
+                <span className="text-[10px] text-muted">
+                  {crowdedLongs ? "longs pay" : "shorts pay"}
+                </span>
+              </button>
+              <Explain
+                className="mt-1.5 px-1"
+                target={{
+                  kind: "funding",
+                  symbol: f.symbol,
+                  ratePct: Number((f.rate * 100).toFixed(4)),
+                }}
+              />
+            </div>
           );
         })}
+      </div>
 
+      {/* Open interest — unchanged horizontal scroller. */}
+      <div className="scrollbar-none mt-2 flex gap-2 overflow-x-auto">
         {data.detail.map((d) => (
           <button
             key={d.symbol}
