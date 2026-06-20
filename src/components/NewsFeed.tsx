@@ -5,6 +5,7 @@ import { ASSET_BY_ID, type Market } from "@/lib/assets";
 import { timeAgo } from "@/lib/format";
 import { MARKET_COLOR, type NewsWeight } from "@/lib/news";
 import { NewsItemSkeleton } from "./DashboardSkeleton";
+import Explain from "./Explain";
 
 export interface NewsItem {
   title: string;
@@ -118,6 +119,16 @@ export default function NewsFeed({
                   </button>
                 );
               })}
+              <Explain
+                className="w-full"
+                target={{
+                  kind: "headline",
+                  title: it.title,
+                  source: it.source,
+                  market: it.market,
+                  assets: it.assets.slice(0, 3),
+                }}
+              />
             </div>
           </article>
         ))}
