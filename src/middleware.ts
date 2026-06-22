@@ -25,10 +25,16 @@ const STRICT_PREFIXES = ["/api/search", "/api/sessionstats"];
 // serves a 10-min shared cache; see app/api/recommendations/route.ts.)
 const AI_PREFIXES = ["/api/recommendations", "/api/explain"];
 
+// The agent route fans ONE request out into several upstream data reads + a
+// multi-step LLM loop, so it gets its own budget — even tighter than api-ai.
+// (See app/api/assistant/route.ts and lib/agent/runtime.ts.)
+const AGENT_PREFIXES = ["/api/assistant"];
+
 // Budgets (requests per window, per IP).
 const DEFAULT_LIMIT = 60;
 const STRICT_LIMIT = 20;
 const AI_LIMIT = 10;
+const AGENT_LIMIT = 5;
 const WINDOW_SECONDS = 60;
 
 /** Best-effort client IP from the usual proxy headers (Vercel sets these). */
@@ -45,10 +51,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Pick the tightest matching budget: AI < strict < default.
+  // Pick the tightest matching budget: agent < AI < strict < default.
   let limit = DEFAULT_LIMIT;
   let bucket = "api-default";
-  if (AI_PREFIXES.some((p) => pathname.startsWith(p))) {
+  if (AGENT_PREFIXES.some((p) => pathname.startsWith(p))) {
+    limit = AGENT_LIMIT;
+    bucket = "api-agent";
+  } else if (AI_PREFIXES.some((p) => pathname.startsWith(p))) {
     limit = AI_LIMIT;
     bucket = "api-ai";
   } else if (STRICT_PREFIXES.some((p) => pathname.startsWith(p))) {
