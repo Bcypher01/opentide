@@ -88,43 +88,9 @@ function RecRow({
   );
 }
 
-/** Placeholder shown only during the initial load so the card's presence is
- *  immediate instead of popping in after the LLM round-trip. */
-function AiInsightsSkeleton() {
-  return (
-    <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-surface">
-      <div className="flex items-center gap-2 px-4 py-3">
-        <IconZap className="h-4 w-4 text-accent" />
-        <span className="text-sm font-medium text-text">AI insights</span>
-        <span className="rounded-full border border-border bg-surface2 px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted/70">
-          analyzing…
-        </span>
-      </div>
-      <div className="space-y-2 px-3 pb-3" aria-hidden>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div
-            key={i}
-            className="flex gap-3 rounded-xl border border-border bg-surface2/40 p-3"
-          >
-            <span className="mt-0.5 h-6 w-1 shrink-0 rounded-full bg-border" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <div className="skeleton h-3 w-20 rounded-full" />
-              <div className="skeleton h-3.5 w-3/4" />
-              <div className="skeleton h-3 w-5/6" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export default function AiInsights({ onSelectAsset }: Props) {
   const watchlist = useStore((s) => s.watchlist);
   const [data, setData] = useState<RecommendationsResult | null>(null);
-  // True once the first fetch has completed (success OR failure) — lets us show
-  // a skeleton only during the initial load, not on every background refetch.
-  const [settled, setSettled] = useState(false);
   const [open, setOpen] = useState(true);
 
   // Stable primitive key so the effect only re-runs when the SET changes,
@@ -150,9 +116,6 @@ export default function AiInsights({ onSelectAsset }: Props) {
         }
       } catch {
         // network/abort — keep last good data, next tick retries
-      } finally {
-        // Mark settled so the skeleton gives way (to the card or to nothing).
-        if (!cancelled) setSettled(true);
       }
     };
 
@@ -175,10 +138,11 @@ export default function AiInsights({ onSelectAsset }: Props) {
   const recs = useMemo(() => data?.recommendations ?? [], [data]);
   const personalized = Boolean(data?.personalized);
 
-  // No recommendations yet: show a skeleton while the FIRST request is in
-  // flight, then hide entirely once settled with nothing (no keys / degraded).
+  // Render nothing until there's real data. This means a failed/slow request,
+  // missing AI keys, or a degraded backend simply shows nothing — never a
+  // loading state that can get stuck when something is wrong.
   if (recs.length === 0) {
-    return settled ? null : <AiInsightsSkeleton />;
+    return null;
   }
 
   return (
