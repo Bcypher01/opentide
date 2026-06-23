@@ -2,13 +2,30 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { DEFAULT_CHART_ASSET, type Market } from "./assets";
+import {
+  CUSTOM_STOCK_CAP,
+  DEFAULT_CHART_ASSET,
+  type CustomAsset,
+  type Market,
+} from "./assets";
 import type { SessionId } from "./sessions";
+
+/** Result of trying to track a custom asset, so the UI can toast on a cap hit. */
+export interface AddCustomResult {
+  ok: boolean;
+  reason?: string;
+}
 
 interface OpentideState {
   watchlist: string[]; // asset ids, e.g. "crypto:BTC"
   toggleWatch: (id: string) => void;
   isWatched: (id: string) => boolean;
+
+  /** Metadata for non-curated assets the user added from universal search,
+   *  keyed by id. Lets watchlist surfaces render/quote/chart them. */
+  customAssets: Record<string, CustomAsset>;
+  /** Register a custom asset and star it. Enforces the custom-stock cap. */
+  addCustomAsset: (asset: CustomAsset) => AddCustomResult;
 
   marketFilter: Market | "all";
   setMarketFilter: (m: Market | "all") => void;
@@ -76,12 +93,43 @@ export const useStore = create<OpentideState>()(
     (set, get) => ({
       watchlist: [],
       toggleWatch: (id) =>
-        set((s) => ({
-          watchlist: s.watchlist.includes(id)
-            ? s.watchlist.filter((x) => x !== id)
-            : [...s.watchlist, id],
-        })),
+        set((s) => {
+          if (!s.watchlist.includes(id)) {
+            return { watchlist: [...s.watchlist, id] };
+          }
+          // Un-starring: drop the id and, if it was a custom asset, forget its
+          // metadata too so the registry can't accumulate orphans.
+          const watchlist = s.watchlist.filter((x) => x !== id);
+          if (s.customAssets[id]) {
+            const next = { ...s.customAssets };
+            delete next[id];
+            return { watchlist, customAssets: next };
+          }
+          return { watchlist };
+        }),
       isWatched: (id) => get().watchlist.includes(id),
+
+      customAssets: {},
+      addCustomAsset: (asset) => {
+        const s = get();
+        if (s.watchlist.includes(asset.id)) return { ok: true };
+        if (asset.market === "stocks") {
+          const tracked = s.watchlist.filter(
+            (id) => s.customAssets[id]?.market === "stocks",
+          ).length;
+          if (tracked >= CUSTOM_STOCK_CAP) {
+            return {
+              ok: false,
+              reason: `You can track up to ${CUSTOM_STOCK_CAP} custom stocks. Remove one first.`,
+            };
+          }
+        }
+        set({
+          customAssets: { ...s.customAssets, [asset.id]: asset },
+          watchlist: [...s.watchlist, asset.id],
+        });
+        return { ok: true };
+      },
 
       marketFilter: "all",
       setMarketFilter: (m) => set({ marketFilter: m }),
@@ -146,6 +194,7 @@ export const useStore = create<OpentideState>()(
       name: "opentide",
       partialize: (s) => ({
         watchlist: s.watchlist,
+        customAssets: s.customAssets,
         useUTC: s.useUTC,
         heroDismissed: s.heroDismissed,
         aboutSeen: s.aboutSeen,

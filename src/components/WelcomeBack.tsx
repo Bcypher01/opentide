@@ -1,11 +1,12 @@
 "use client";
 
-import { ASSET_BY_ID } from "@/lib/assets";
+import { resolveAsset, type CustomAsset } from "@/lib/assets";
 import { formatChangePct } from "@/lib/format";
 import type { AwayDiff } from "@/lib/hooks";
 
 interface Props {
   diff: AwayDiff;
+  customAssets: Record<string, CustomAsset>;
   onDismiss: () => void;
   onSelect: (assetId: string) => void;
 }
@@ -22,7 +23,12 @@ function awayLabel(ms: number): string {
  * what moved on the trader's watchlist since they last looked. The cheapest
  * possible answer to "what did I miss?".
  */
-export default function WelcomeBack({ diff, onDismiss, onSelect }: Props) {
+export default function WelcomeBack({
+  diff,
+  customAssets,
+  onDismiss,
+  onSelect,
+}: Props) {
   return (
     <section
       aria-label="While you were away"
@@ -34,13 +40,13 @@ export default function WelcomeBack({ diff, onDismiss, onSelect }: Props) {
 
       <div className="flex flex-wrap items-center gap-2">
         {diff.moves.map((m) => {
-          const a = ASSET_BY_ID[m.id];
+          const a = resolveAsset(m.id, customAssets);
           if (!a) return null;
           const up = m.pct >= 0;
           return (
             <button
               key={m.id}
-              onClick={() => onSelect(m.id)}
+              onClick={() => onSelect(customAssets[m.id]?.chartId ?? m.id)}
               title={`Chart ${a.symbol}`}
               className="flex items-baseline gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-xs transition-colors hover:border-accent/40"
             >

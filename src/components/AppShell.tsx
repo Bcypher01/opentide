@@ -18,6 +18,9 @@ const AboutModal = dynamic(() => import("./AboutModal"), { ssr: false });
 const ChartModal = dynamic(() => import("./ChartModal"), { ssr: false });
 const CommandPalette = dynamic(() => import("./CommandPalette"), { ssr: false });
 const NotifSettings = dynamic(() => import("./NotifSettings"), { ssr: false });
+// Floating market assistant — fixed bottom-right on every page. Self-hides when
+// no LLM key is configured, so it adds nothing to the UI when AI is off.
+const Assistant = dynamic(() => import("./Assistant"), { ssr: false });
 
 const NAV = [
   { href: "/", label: "Dashboard" },
@@ -245,6 +248,7 @@ export default function AppShell({
       {mounted && chartLoaded && <ChartModal />}
       {mounted && aboutLoaded && <AboutModal />}
       {mounted && paletteLoaded && <CommandPalette />}
+      {mounted && <Assistant />}
 
       <footer className="mx-auto w-full max-w-[1700px] px-4 pb-8 text-center text-xs text-muted/60 lg:px-6">
         <p>

@@ -6,8 +6,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ALL_ASSETS,
   ASSET_BY_ID,
+  resolveAsset,
   SUGGESTED_STARS,
   type AssetDef,
+  type CustomAsset,
   type Market,
 } from "@/lib/assets";
 import type { CalendarPayload } from "@/app/api/calendar/route";
@@ -93,6 +95,7 @@ export default function Dashboard() {
 
   const {
     watchlist,
+    customAssets,
     toggleWatch,
     marketFilter,
     setMarketFilter,
@@ -132,7 +135,54 @@ export default function Dashboard() {
     });
   }, [notifPrefs, watchlist]);
 
-  // id -> quote, with live WS ticks layered over REST for crypto
+  // Custom (non-curated) watchlist assets and their on-demand quote feed.
+  const customWatched = useMemo(
+    () =>
+      watchlist
+        .map((id) => customAssets[id])
+        .filter((a): a is CustomAsset => Boolean(a)),
+    [watchlist, customAssets],
+  );
+  const customQuoteUrl = useMemo(() => {
+    if (!customWatched.length) return null;
+    const cr = customWatched.filter((a) => a.market === "crypto").map((a) => a.quoteSymbol);
+    const st = customWatched.filter((a) => a.market === "stocks").map((a) => a.quoteSymbol);
+    const qs = new URLSearchParams();
+    if (cr.length) qs.set("crypto", cr.join(","));
+    if (st.length) qs.set("stocks", st.join(","));
+    return `/api/quote?${qs.toString()}`;
+  }, [customWatched]);
+
+  const [customQuotes, setCustomQuotes] = useState<Record<string, Quote>>({});
+  useEffect(() => {
+    if (!customQuoteUrl) {
+      setCustomQuotes({});
+      return;
+    }
+    let cancelled = false;
+    const tick = async () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      try {
+        const res = await fetch(customQuoteUrl);
+        if (!res.ok) return;
+        const json = (await res.json()) as {
+          quotes?: Record<string, Quote>;
+        };
+        if (!cancelled && json.quotes) setCustomQuotes(json.quotes);
+      } catch {
+        // keep last good custom quotes; next tick retries
+      }
+    };
+    void tick();
+    const t = setInterval(tick, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [customQuoteUrl]);
+
+  // id -> quote, with live WS ticks layered over REST for crypto, plus the
+  // on-demand quotes for any custom assets the user tracks.
   const quoteOf = useMemo(() => {
     const map: Record<string, Quote> = {};
     for (const q of forex.data?.quotes ?? []) map[`forex:${q.symbol}`] = q;
@@ -141,8 +191,9 @@ export default function Dashboard() {
     for (const [sym, tick] of Object.entries(live)) {
       map[`crypto:${sym}`] = { symbol: sym, price: tick.price, changePct: tick.changePct };
     }
+    for (const [id, q] of Object.entries(customQuotes)) map[id] = q;
     return map;
-  }, [forex.data, crypto.data, stocks.data, live]);
+  }, [forex.data, crypto.data, stocks.data, live, customQuotes]);
 
   // Auto-sync the session filter to whichever session is currently open
   // (e.g. Tokyo open → Tokyo pairs). During overlaps we pick the most recently
@@ -199,7 +250,7 @@ export default function Dashboard() {
   }, [visible]);
 
   const watched = watchlist
-    .map((id) => ASSET_BY_ID[id])
+    .map((id) => resolveAsset(id, customAssets))
     .filter((a): a is AssetDef => Boolean(a));
 
   const { diff: awayDiff, dismiss: dismissAway } = useAwayDiff(quoteOf, watchlist);
@@ -226,6 +277,7 @@ export default function Dashboard() {
       <AppShell ticker={<Ticker quoteOf={quoteOf} onSelect={openChart} />}>
         <DigestView
           watchlist={watchlist}
+          customAssets={customAssets}
           quoteOf={quoteOf}
           news={news.data?.items ?? []}
           states={states}
@@ -246,7 +298,12 @@ export default function Dashboard() {
 
       {/* Return visit: what moved while you were away */}
       {awayDiff && (
-        <WelcomeBack diff={awayDiff} onDismiss={dismissAway} onSelect={openChart} />
+        <WelcomeBack
+          diff={awayDiff}
+          customAssets={customAssets}
+          onDismiss={dismissAway}
+          onSelect={openChart}
+        />
       )}
 
       {/* Daily briefing: first visit of the local day, collapses after read */}
@@ -326,7 +383,11 @@ export default function Dashboard() {
             ) : (
               <div className="max-h-[264px] overflow-y-auto">
                 {watched.map((a) => (
-                  <div key={a.id} onClick={() => openChart(a.id)} className="cursor-pointer">
+                  <div
+                    key={a.id}
+                    onClick={() => openChart(customAssets[a.id]?.chartId ?? a.id)}
+                    className="cursor-pointer"
+                  >
                     <PriceRow
                       asset={a}
                       price={quoteOf[a.id]?.price ?? null}

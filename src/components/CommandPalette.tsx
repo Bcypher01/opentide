@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ALL_ASSETS } from "@/lib/assets";
+import { ALL_ASSETS, type CustomAsset } from "@/lib/assets";
 import {
   rank,
   searchAssets,
@@ -18,7 +18,7 @@ import {
   type StockHit,
 } from "@/lib/search";
 import { useStore } from "@/lib/store";
-import { IconCalendar, IconCandles, IconNews } from "./Icons";
+import { IconCalendar, IconCandles, IconNews, IconStar } from "./Icons";
 
 // --- Session-level caches (survive palette open/close, reset on reload) -----
 const NEWS_TTL = 5 * 60_000;
@@ -63,10 +63,15 @@ export default function CommandPalette() {
   const open = useStore((s) => s.paletteOpen);
   const closePalette = useStore((s) => s.closePalette);
   const openModal = useStore((s) => s.openModal);
+  const watchlist = useStore((s) => s.watchlist);
+  const toggleWatch = useStore((s) => s.toggleWatch);
+  const addCustomAsset = useStore((s) => s.addCustomAsset);
   const router = useRouter();
 
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
+  // Transient message when a track attempt is rejected (e.g. custom-stock cap).
+  const [notice, setNotice] = useState<string | null>(null);
   const [news, setNews] = useState<NewsLike[]>(() => newsCache?.items ?? []);
   const [cal, setCal] = useState<CalendarLike[]>(() => calCache?.events ?? []);
   const [stockHits, setStockHits] = useState<StockHit[]>([]);
@@ -190,8 +195,14 @@ export default function CommandPalette() {
 
   const close = useCallback(() => {
     setQ("");
+    setNotice(null);
     closePalette();
   }, [closePalette]);
+
+  // A new query supersedes any stale cap/track notice.
+  useEffect(() => {
+    setNotice(null);
+  }, [q]);
 
   const run = useCallback(
     (r: SearchResult | undefined) => {
@@ -213,6 +224,21 @@ export default function CommandPalette() {
       }
     },
     [openModal, close, router]
+  );
+
+  // Star/unstar a full-universe hit without leaving the palette. Enforces the
+  // custom-stock cap via the store and surfaces the reason inline on a reject.
+  const toggleTrack = useCallback(
+    (track: CustomAsset) => {
+      if (watchlist.includes(track.id)) {
+        toggleWatch(track.id);
+        setNotice(null);
+        return;
+      }
+      const res = addCustomAsset(track);
+      setNotice(res.ok ? null : (res.reason ?? "Couldn't track that asset."));
+    },
+    [watchlist, toggleWatch, addCustomAsset]
   );
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -329,13 +355,18 @@ export default function CommandPalette() {
                       idx += 1;
                       const i = idx;
                       const meta = KIND_META[r.kind];
+                      const watched = r.track
+                        ? watchlist.includes(r.track.id)
+                        : false;
                       return (
-                        <button
+                        <div
                           key={r.key}
                           data-idx={i}
+                          role="button"
+                          tabIndex={-1}
                           onMouseMove={() => setActive(i)}
                           onClick={() => run(r)}
-                          className={`flex w-full items-center gap-3 px-4 py-2 text-left transition-colors ${
+                          className={`flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-left transition-colors ${
                             i === active ? "bg-surface2" : "hover:bg-surface2/60"
                           }`}
                         >
@@ -365,10 +396,34 @@ export default function CommandPalette() {
                               </span>
                             )}
                           </span>
-                          <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted/60">
-                            {meta.badge}
-                          </span>
-                        </button>
+                          {/* Full-universe hits get a star so they can be tracked
+                              (added to the watchlist) without leaving search. */}
+                          {r.track ? (
+                            <button
+                              type="button"
+                              aria-label={
+                                watched
+                                  ? `Stop tracking ${r.track.symbol}`
+                                  : `Track ${r.track.symbol}`
+                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (r.track) toggleTrack(r.track);
+                              }}
+                              className={`shrink-0 rounded-md p-1.5 transition-colors ${
+                                watched
+                                  ? "text-accent"
+                                  : "text-muted/50 hover:text-muted"
+                              }`}
+                            >
+                              <IconStar size={15} filled={watched} />
+                            </button>
+                          ) : (
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted/60">
+                              {meta.badge}
+                            </span>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -383,6 +438,13 @@ export default function CommandPalette() {
               )}
             </div>
 
+            {/* Cap / track feedback */}
+            {notice && (
+              <div className="border-t border-border bg-surface2/40 px-4 py-2 text-[12px] text-bear">
+                {notice}
+              </div>
+            )}
+
             {/* footer — keyboard hints */}
             <div className="flex items-center gap-3 border-t border-border px-4 py-2 text-[11px] text-muted/70">
               <Kbd>↑</Kbd>
@@ -392,6 +454,9 @@ export default function CommandPalette() {
               <span>open</span>
               <Kbd>esc</Kbd>
               <span>close</span>
+              <span className="ml-auto">
+                <IconStar size={11} /> star to track
+              </span>
             </div>
           </motion.div>
         </motion.div>

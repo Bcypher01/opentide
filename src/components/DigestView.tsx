@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { ASSET_BY_ID, type AssetDef } from "@/lib/assets";
+import { resolveAsset, type AssetDef, type CustomAsset } from "@/lib/assets";
 import type { CalendarPayload } from "@/app/api/calendar/route";
 import { formatChangePct, timeAgo } from "@/lib/format";
 import { filterEvents, nextHighImpact, formatEventTime, eventCountdown } from "@/lib/calendar";
@@ -17,6 +17,7 @@ import {
 
 interface Props {
   watchlist: string[];
+  customAssets: Record<string, CustomAsset>;
   quoteOf: Record<string, { price: number; changePct: number | null }>;
   news: NewsItem[];
   states: SessionState[];
@@ -47,6 +48,7 @@ function newsFor(asset: AssetDef, items: NewsItem[], limit = 2): NewsItem[] {
 
 export default function DigestView({
   watchlist,
+  customAssets,
   quoteOf,
   news,
   states,
@@ -61,9 +63,9 @@ export default function DigestView({
   const watched = useMemo(
     () =>
       watchlist
-        .map((id) => ASSET_BY_ID[id])
+        .map((id) => resolveAsset(id, customAssets))
         .filter((a): a is AssetDef => Boolean(a)),
-    [watchlist]
+    [watchlist, customAssets]
   );
 
   const upcomingEvents = useMemo(() => {
@@ -132,7 +134,9 @@ export default function DigestView({
                 {/* Asset row */}
                 <div className="flex items-start justify-between gap-3">
                   <button
-                    onClick={() => onSelectAsset(asset.id)}
+                    onClick={() =>
+                      onSelectAsset(customAssets[asset.id]?.chartId ?? asset.id)
+                    }
                     className="group flex min-w-0 items-baseline gap-2 text-left"
                   >
                     <span className="font-medium text-text group-hover:text-accent transition-colors">
