@@ -106,6 +106,58 @@ export const ASSET_BY_ID: Record<string, AssetDef> = Object.fromEntries(
   ALL_ASSETS.map((a) => [a.id, a])
 );
 
+// ---------------------------------------------------------------------------
+// Custom (non-curated) assets — coins/stocks a user adds from universal search.
+//
+// The curated arrays above are the polled, session-tagged, AI-grounded core.
+// A CustomAsset is the minimum we need to treat an off-universe symbol as a
+// first-class watchlist member: render it (symbol/name/market), quote it
+// (quoteSymbol → /api/quote) and chart it (chartId → resolveChartTarget). Only
+// crypto + stocks are supported; forex has no honest free per-pair source.
+// ---------------------------------------------------------------------------
+
+/** How many custom STOCKS a single user may track (Finnhub free-tier budget). */
+export const CUSTOM_STOCK_CAP = 10;
+
+export interface CustomAsset {
+  id: string; // "crypto:PEPE" | "stocks:TSLA" — shares the curated id namespace
+  market: "crypto" | "stocks";
+  symbol: string; // display, e.g. "PEPE", "TSLA"
+  name: string;
+  /** Symbol to quote: Binance pair ("PEPEUSDT") for crypto, ticker for stocks. */
+  quoteSymbol: string;
+  /** "custom|TV:SYMBOL|Label" id resolveChartTarget() understands. */
+  chartId: string;
+}
+
+/** Promote a CustomAsset into the AssetDef shape the UI renders, deriving the
+ *  fields curated assets carry (sessions by market; no news keywords). */
+export function customToAssetDef(c: CustomAsset): AssetDef {
+  return {
+    id: c.id,
+    market: c.market,
+    symbol: c.symbol,
+    name: c.name,
+    sessions:
+      c.market === "crypto"
+        ? ["sydney", "tokyo", "london", "newyork"]
+        : ["newyork"],
+    newsKeywords: [],
+  };
+}
+
+/** Resolve an id to an AssetDef from the curated map first, then a caller-
+ *  supplied custom registry (the client store). Undefined if neither knows it. */
+export function resolveAsset(
+  id: string,
+  custom?: Record<string, CustomAsset>,
+): AssetDef | undefined {
+  const curated = ASSET_BY_ID[id];
+  if (curated) return curated;
+  const c = custom?.[id];
+  return c ? customToAssetDef(c) : undefined;
+}
+
 /** Binance stream symbols for the crypto list (USDT-quoted). */
 export const BINANCE_SYMBOLS = CRYPTO_ASSETS.map((a) => `${a.symbol}USDT`);
 

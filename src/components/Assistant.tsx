@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { IconX, IconZap } from "./Icons";
 
 // ---------------------------------------------------------------------------
@@ -14,9 +14,12 @@ import { IconX, IconZap } from "./Icons";
 // key the app looks exactly as before.
 //
 // When the user asks, the panel streams the agent's progress: "Checking prices…"
-// chips appear as tools run, then the grounded answer replaces them. Single-turn
-// for now (Phase 1) — each ask is independent; conversation memory lands in
-// Phase 2.
+// chips appear as tools run, then the grounded answer replaces them.
+//
+// Multi-turn: a per-browser sessionId (persisted in localStorage) is sent with
+// every ask, so the server can thread follow-ups ("and ETH?") onto the prior
+// conversation (see lib/agent/session.ts). The transcript below also keeps the
+// turns client-side for display.
 //
 // Read-only + not financial advice: the footer repeats the disclaimer.
 // ---------------------------------------------------------------------------
@@ -26,9 +29,58 @@ interface Turn {
   text: string;
 }
 
+const SESSION_KEY = "opentide.assistant.session";
+
+/** Stable per-browser conversation id; created once and reused across visits. */
+function getSessionId(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    let id = window.localStorage.getItem(SESSION_KEY);
+    if (!id || !/^[A-Za-z0-9_-]{8,64}$/.test(id)) {
+      id =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID().replace(/-/g, "")
+          : Math.random().toString(36).slice(2) + Date.now().toString(36);
+      window.localStorage.setItem(SESSION_KEY, id);
+    }
+    return id;
+  } catch {
+    // localStorage blocked (private mode) → ephemeral, single-turn session.
+    return "";
+  }
+}
+
 type AgentEvent =
   | { type: "tool"; tool: string; label: string }
   | { type: "answer"; answer: string; degraded: boolean; stop: string };
+
+// Render the agent's answer, turning markdown links [text](url) — the citation
+// format the get_news tool asks the model to use — into real, safe anchors.
+// Only http(s) links are linkified; everything else stays plain text.
+const MD_LINK = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+function renderWithLinks(text: string): ReactNode {
+  const out: ReactNode[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  MD_LINK.lastIndex = 0;
+  while ((m = MD_LINK.exec(text)) !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    out.push(
+      <a
+        key={m.index}
+        href={m[2]}
+        target="_blank"
+        rel="noopener noreferrer nofollow"
+        className="text-accent underline underline-offset-2 hover:text-accent/80"
+      >
+        {m[1]}
+      </a>,
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
 
 const SUGGESTIONS = [
   "Why is Bitcoin moving today?",
@@ -45,6 +97,12 @@ export default function Assistant() {
   const [chips, setChips] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const sessionId = useRef<string>("");
+
+  // Mint/restore the conversation id once on mount (client-only).
+  useEffect(() => {
+    sessionId.current = getSessionId();
+  }, []);
 
   // Capability probe — hide entirely when no provider key is configured.
   useEffect(() => {
@@ -90,7 +148,10 @@ export default function Assistant() {
       const res = await fetch("/api/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: q }),
+        body: JSON.stringify({
+          message: q,
+          ...(sessionId.current ? { sessionId: sessionId.current } : {}),
+        }),
       });
 
       if (!res.ok || !res.body) {
@@ -148,7 +209,7 @@ export default function Assistant() {
   if (!enabled) return null;
 
   return (
-    <AnimatePresence mode="popLayout" initial={false}>
+    <AnimatePresence mode="wait" initial={false}>
       {/* Launcher — pinned bottom-right, hidden while the window is open. */}
       {!open && (
         <motion.button
@@ -231,7 +292,7 @@ export default function Assistant() {
                       : "border border-border bg-surface2/50 text-text"
                   }`}
                 >
-                  {t.text}
+                  {t.role === "assistant" ? renderWithLinks(t.text) : t.text}
                 </p>
               </div>
             ))}

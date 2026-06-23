@@ -26,22 +26,18 @@ import {
   type AgentMessage,
   type LlmProvider,
 } from "@/lib/llm";
+import {
+  buildSystemPrompt,
+  encodeToolResult,
+  groundedTermsFrom,
+  ungroundedAssetIds,
+} from "./guardrails";
 import { assetCatalogue, TOOL_BY_NAME, TOOL_DECLARATIONS } from "./tools";
 
 const MAX_STEPS = 6;
 const DEADLINE_MS = 30_000;
-const MAX_TOOL_RESULT_CHARS = 4_000; // keep one tool result from blowing context
 
-const SYSTEM = [
-  "You are the OpenTide market assistant, embedded in a real-time trading dashboard.",
-  "Answer the user's question about markets (crypto, forex, stocks) by CALLING TOOLS to fetch live data first, then explaining what it means in plain, measured language.",
-  "Ground every factual claim (prices, moves, sentiment, catalysts) in tool results. Never invent numbers, headlines, or events. If a tool returns an error or no data, say so plainly rather than guessing.",
-  "Only reference asset ids, symbols, and headlines that actually appear in tool results.",
-  "This is market commentary for an informed user, NOT personalized financial advice. Do not give buy/sell calls or price targets; flag risk where relevant. You cannot place trades or move money — if asked to, explain that the user must act themselves.",
-  "Be concise. Prefer 2-5 sentences. Stop calling tools as soon as you have enough to answer.",
-  "",
-  `Valid asset ids you can ask about: ${assetCatalogue()}`,
-].join("\n");
+const SYSTEM = buildSystemPrompt(assetCatalogue());
 
 /** One recorded step of the run (telemetry + evals). */
 export interface AgentTraceStep {
@@ -60,6 +56,9 @@ export interface AgentRunResult {
   model?: string;
   /** Why it stopped: "answered" | "max_steps" | "deadline" | "unavailable". */
   stop: "answered" | "max_steps" | "deadline" | "unavailable";
+  /** Explicit asset ids (market:SYMBOL) the answer named that no tool returned —
+   *  a grounding red flag for telemetry/evals. Empty on a clean run. */
+  ungroundedRefs?: string[];
   /** Dev-only failure detail. */
   error?: string;
 }
@@ -79,22 +78,19 @@ const TOOL_LABELS: Record<string, string> = {
   get_quotes: "Checking prices",
   get_pulse: "Reading market sentiment",
   get_news: "Scanning headlines",
+  get_funding: "Checking positioning",
+  get_calendar: "Checking the calendar",
+  screen_markets: "Screening markets",
+  get_recommendations: "Pulling today's ideas",
+  lookup_asset: "Looking up the asset",
 };
 
 export interface RunAgentOpts {
-  /** Prior conversation turns (multi-turn lands in Phase 2; accepted now). */
+  /** Prior conversation turns for multi-turn memory (see agent/session.ts). */
   history?: AgentMessage[];
   temperature?: number;
   /** Fires as the agent works, so a route can stream progress to the client. */
   onEvent?: (e: AgentEvent) => void;
-}
-
-/** Truncate a tool result to a token-lean JSON string. */
-function encodeToolResult(value: unknown): string {
-  const s = JSON.stringify(value);
-  return s.length > MAX_TOOL_RESULT_CHARS
-    ? s.slice(0, MAX_TOOL_RESULT_CHARS) + '…"}'
-    : s;
 }
 
 /**
@@ -112,6 +108,7 @@ export async function runAgent(
 
   const steps: AgentTraceStep[] = [];
   const seen = new Set<string>(); // duplicate tool+args guard
+  const grounded = new Set<string>(); // asset ids/symbols the tools actually returned
   const deadline = Date.now() + DEADLINE_MS;
   let lastProvider: LlmProvider | undefined;
   let lastModel: string | undefined;
@@ -153,13 +150,15 @@ export async function runAgent(
 
     // No tool calls → this is the final answer.
     if (!turn.toolCalls || turn.toolCalls.length === 0) {
+      const answer = turn.content?.trim() || "I couldn't find anything useful on that.";
       return {
-        answer: turn.content?.trim() || "I couldn't find anything useful on that.",
+        answer,
         steps,
         degraded: false,
         provider: turn.provider,
         model: turn.model,
         stop: "answered",
+        ungroundedRefs: ungroundedAssetIds(answer, grounded),
       };
     }
 
@@ -195,6 +194,7 @@ export async function runAgent(
         try {
           result = await tool.handler(call.args ?? {});
           ok = !(result && typeof result === "object" && "error" in result);
+          if (ok) for (const t of groundedTermsFrom(result)) grounded.add(t);
         } catch (e) {
           result = { error: e instanceof Error ? e.message : "tool failed" };
         }
@@ -212,7 +212,7 @@ export async function runAgent(
         role: "tool",
         toolCallId: call.id,
         name: call.name,
-        content: encodeToolResult(result),
+        content: encodeToolResult(call.name, result),
       });
     }
   }
@@ -232,13 +232,16 @@ export async function runAgent(
       [],
       { temperature: opts.temperature ?? 0.2 },
     );
+    const answer =
+      final.content?.trim() || "I gathered some data but couldn't conclude.";
     return {
-      answer: final.content?.trim() || "I gathered some data but couldn't conclude.",
+      answer,
       steps,
       degraded: false,
       provider: final.provider,
       model: final.model,
       stop: "max_steps",
+      ungroundedRefs: ungroundedAssetIds(answer, grounded),
     };
   } catch {
     return {

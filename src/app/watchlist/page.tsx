@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AiInsights from "@/components/AiInsights";
 import AppShell from "@/components/AppShell";
@@ -9,8 +9,10 @@ import NewsFeed, { type NewsItem } from "@/components/NewsFeed";
 import PriceRow from "@/components/PriceRow";
 import {
   ASSET_BY_ID,
+  resolveAsset,
   SUGGESTED_STARS,
   type AssetDef,
+  type CustomAsset,
 } from "@/lib/assets";
 import { useBinanceLive, useNow, usePolling } from "@/lib/hooks";
 import { useOpenChart } from "@/lib/nav";
@@ -38,7 +40,7 @@ interface NewsPayload {
 export default function WatchlistPage() {
   const now = useNow(1000);
   const openChart = useOpenChart();
-  const { watchlist, toggleWatch, openPalette } = useStore();
+  const { watchlist, customAssets, toggleWatch, openPalette } = useStore();
   const [addOpen, setAddOpen] = useState(false);
 
   const crypto = usePolling<ApiPayload>("/api/crypto", 30_000);
@@ -46,6 +48,46 @@ export default function WatchlistPage() {
   const stocks = usePolling<ApiPayload>("/api/stocks", 60_000);
   const news = usePolling<NewsPayload>("/api/news", 300_000);
   const live = useBinanceLive();
+
+  // On-demand quotes for any custom (non-curated) assets the user tracks.
+  const customQuoteUrl = useMemo(() => {
+    const tracked = watchlist
+      .map((id) => customAssets[id])
+      .filter((a): a is CustomAsset => Boolean(a));
+    if (!tracked.length) return null;
+    const cr = tracked.filter((a) => a.market === "crypto").map((a) => a.quoteSymbol);
+    const st = tracked.filter((a) => a.market === "stocks").map((a) => a.quoteSymbol);
+    const qs = new URLSearchParams();
+    if (cr.length) qs.set("crypto", cr.join(","));
+    if (st.length) qs.set("stocks", st.join(","));
+    return `/api/quote?${qs.toString()}`;
+  }, [watchlist, customAssets]);
+
+  const [customQuotes, setCustomQuotes] = useState<Record<string, Quote>>({});
+  useEffect(() => {
+    if (!customQuoteUrl) {
+      setCustomQuotes({});
+      return;
+    }
+    let cancelled = false;
+    const tick = async () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      try {
+        const res = await fetch(customQuoteUrl);
+        if (!res.ok) return;
+        const json = (await res.json()) as { quotes?: Record<string, Quote> };
+        if (!cancelled && json.quotes) setCustomQuotes(json.quotes);
+      } catch {
+        // keep last good custom quotes
+      }
+    };
+    void tick();
+    const t = setInterval(tick, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [customQuoteUrl]);
 
   const quoteOf = useMemo(() => {
     const map: Record<string, Quote> = {};
@@ -55,11 +97,12 @@ export default function WatchlistPage() {
     for (const [sym, tick] of Object.entries(live)) {
       map[`crypto:${sym}`] = { symbol: sym, price: tick.price, changePct: tick.changePct };
     }
+    for (const [id, q] of Object.entries(customQuotes)) map[id] = q;
     return map;
-  }, [forex.data, crypto.data, stocks.data, live]);
+  }, [forex.data, crypto.data, stocks.data, live, customQuotes]);
 
   const watched = watchlist
-    .map((id) => ASSET_BY_ID[id])
+    .map((id) => resolveAsset(id, customAssets))
     .filter((a): a is AssetDef => Boolean(a));
 
   // Newswire filtered to stories that mention a watched asset.
@@ -137,7 +180,11 @@ export default function WatchlistPage() {
 
                 <div>
                   {watched.map((a) => (
-                    <div key={a.id} onClick={() => openChart(a.id)} className="cursor-pointer">
+                    <div
+                      key={a.id}
+                      onClick={() => openChart(customAssets[a.id]?.chartId ?? a.id)}
+                      className="cursor-pointer"
+                    >
                       <PriceRow
                         asset={a}
                         price={quoteOf[a.id]?.price ?? null}

@@ -7,7 +7,7 @@
 // trivially unit-testable.
 // ---------------------------------------------------------------------------
 
-import type { AssetDef, Market } from "./assets";
+import type { AssetDef, CustomAsset, Market } from "./assets";
 import { ASSET_BY_ID } from "./assets";
 
 export type ResultKind = "asset" | "symbol" | "news" | "calendar";
@@ -28,6 +28,8 @@ export interface SearchResult {
   /** action === "calendar": event timestamp (for context) */
   eventTs?: number;
   market?: Market;
+  /** Present on full-universe symbol hits — metadata to star/track the asset. */
+  track?: CustomAsset;
 }
 
 /** Slim shapes the palette feeds in — kept local so search.ts has no UI deps. */
@@ -209,6 +211,14 @@ export function searchStockUniverse(
       action: "chart",
       chartId: stockChartId(h.symbol),
       market: "stocks",
+      track: {
+        id: `stocks:${h.symbol}`,
+        market: "stocks",
+        symbol: h.symbol,
+        name: h.description,
+        quoteSymbol: h.symbol,
+        chartId: stockChartId(h.symbol),
+      },
     });
   }
   return out;
@@ -235,6 +245,14 @@ export function searchCryptoUniverse(
       action: "chart",
       chartId: cryptoChartId(h.symbol, h.base),
       market: "crypto",
+      track: {
+        id: `crypto:${h.base}`,
+        market: "crypto",
+        symbol: h.base,
+        name: h.base,
+        quoteSymbol: h.symbol,
+        chartId: cryptoChartId(h.symbol, h.base),
+      },
     });
   }
   return out;

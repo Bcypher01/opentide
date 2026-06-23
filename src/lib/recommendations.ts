@@ -130,8 +130,14 @@ const RECS_SCHEMA: Record<string, unknown> = {
 };
 
 /** Build the chat messages for one recommendations pass. */
+/** Curated ids plus any custom watchlist ids the user is tracking, so the model
+ *  may reference (and we may keep) assetIds for non-curated assets too. */
+function validAssetIds(ctx: RecommendationContext): string[] {
+  return [...new Set([...Object.keys(ASSET_BY_ID), ...ctx.watchlist.map((w) => w.id)])];
+}
+
 export function buildMessages(ctx: RecommendationContext): LlmMessage[] {
-  const validIds = Object.keys(ASSET_BY_ID);
+  const validIds = validAssetIds(ctx);
   const hasWatchlist = ctx.watchlist.length > 0;
   const user = [
     hasWatchlist
@@ -180,7 +186,13 @@ function extractJson(text: string): string {
  * doesn't fit the schema is dropped rather than thrown, so a single bad item
  * can't blank the whole feed.
  */
-export function parseRecommendations(text: string): AiRecommendation[] {
+export function parseRecommendations(
+  text: string,
+  validIds?: Set<string>,
+): AiRecommendation[] {
+  // Default to the curated map; callers with custom watchlist assets pass a
+  // widened set so those assetIds survive validation.
+  const valid = validIds ?? new Set(Object.keys(ASSET_BY_ID));
   let raw: unknown;
   try {
     raw = JSON.parse(extractJson(text));
@@ -208,7 +220,7 @@ export function parseRecommendations(text: string): AiRecommendation[] {
     if (p === 1 || p === 2 || p === 3) priority = p;
 
     let assetId: string | undefined;
-    if (typeof o.assetId === "string" && o.assetId in ASSET_BY_ID) {
+    if (typeof o.assetId === "string" && valid.has(o.assetId)) {
       assetId = o.assetId;
     }
 
@@ -238,8 +250,13 @@ export async function getRecommendations(
       json: true,
       schema: RECS_SCHEMA,
       temperature: 0.4,
+      // Latency budget for the insights card: abandon a stalled model after 8s
+      // (vs the 12s default) and try at most 4 rungs, bounding the worst case
+      // to ~32s instead of ~60s. Typical first-hit success is unaffected.
+      timeoutMs: 8_000,
+      maxAttempts: 4,
     });
-    const recommendations = parseRecommendations(text);
+    const recommendations = parseRecommendations(text, new Set(validAssetIds(ctx)));
     return {
       recommendations,
       provider,

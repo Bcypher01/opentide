@@ -106,6 +106,18 @@ export interface GenerateOpts {
    * caller-side validation — same guarantees as before, just no regression.
    */
   schema?: Record<string, unknown>;
+  /**
+   * Per-attempt wall-clock budget (ms). Defaults to TIMEOUT_MS (12s). Latency-
+   * sensitive callers (e.g. the AI-insights card) pass a tighter value so a
+   * slow/stalled model is abandoned for the next rung sooner.
+   */
+  timeoutMs?: number;
+  /**
+   * Cap on how many ladder rungs to try before giving up. Defaults to the full
+   * ladder. Trades a little fallback resiliency for a bounded worst-case
+   * latency (worst case ≈ maxAttempts × timeoutMs).
+   */
+  maxAttempts?: number;
 }
 
 /** Thrown only when NO attempt produced a result. Callers catch this and
@@ -136,13 +148,14 @@ export function llmEnabled(): boolean {
   return Boolean(GEMINI_KEY || OPENROUTER_KEY);
 }
 
-/** fetch with an AbortController timeout. */
+/** fetch with an AbortController timeout (defaults to TIMEOUT_MS). */
 async function fetchWithTimeout(
   url: string,
   init: RequestInit,
+  timeoutMs: number = TIMEOUT_MS,
 ): Promise<Response> {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     return await fetch(url, { ...init, signal: ctrl.signal, cache: "no-store" });
   } finally {
@@ -184,6 +197,7 @@ async function callGemini(
         },
         body: JSON.stringify(body),
       },
+      opts.timeoutMs,
     );
   } catch (e) {
     // Network error / timeout (AbortError) → retryable (null status).
@@ -222,21 +236,25 @@ async function callOpenRouter(
 ): Promise<string> {
   let res: Response;
   try {
-    res = await fetchWithTimeout("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENROUTER_KEY as string}`,
-        "HTTP-Referer": process.env.APP_URL || "https://opentide.app",
-        "X-Title": "OpenTide",
+    res = await fetchWithTimeout(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENROUTER_KEY as string}`,
+          "HTTP-Referer": process.env.APP_URL || "https://opentide.app",
+          "X-Title": "OpenTide",
+        },
+        body: JSON.stringify({
+          model,
+          messages: messages.map((m) => ({ role: m.role, content: m.content })),
+          temperature: opts.temperature ?? 0.4,
+          ...(opts.json ? { response_format: { type: "json_object" } } : {}),
+        }),
       },
-      body: JSON.stringify({
-        model,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        temperature: opts.temperature ?? 0.4,
-        ...(opts.json ? { response_format: { type: "json_object" } } : {}),
-      }),
-    });
+      opts.timeoutMs,
+    );
   } catch (e) {
     throw new ProviderError(
       "openrouter",
@@ -304,8 +322,15 @@ export async function generate(
   messages: LlmMessage[],
   opts: GenerateOpts = {},
 ): Promise<LlmResult> {
-  const attempts = buildAttempts(messages, opts);
-  if (attempts.length === 0) throw new LlmUnavailableError();
+  const all = buildAttempts(messages, opts);
+  if (all.length === 0) throw new LlmUnavailableError();
+
+  // Optionally cap the ladder so worst-case latency is bounded for latency-
+  // sensitive callers (≈ maxAttempts × timeoutMs).
+  const attempts =
+    opts.maxAttempts && opts.maxAttempts > 0
+      ? all.slice(0, opts.maxAttempts)
+      : all;
 
   const errors: string[] = [];
   const skip = new Set<LlmProvider>();

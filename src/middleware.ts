@@ -18,7 +18,9 @@ import { rateLimit } from "@/lib/rate-limit";
 const EXEMPT_PREFIXES = ["/api/inngest"];
 
 // Expensive routes that reach large upstream universes / heavy computation.
-const STRICT_PREFIXES = ["/api/search", "/api/sessionstats"];
+// /api/quote fans out to Binance/Finnhub for arbitrary symbols (Finnhub is one
+// call per ticker), so it belongs with the stricter budget.
+const STRICT_PREFIXES = ["/api/search", "/api/sessionstats", "/api/quote"];
 
 // AI routes hit a quota-limited LLM upstream — kept on the tightest per-IP
 // budget so one client can't burn the shared free-tier quota. (The route also

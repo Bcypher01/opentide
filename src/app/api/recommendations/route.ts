@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import type { CalendarPayload } from "@/app/api/calendar/route";
-import type { DerivsPayload } from "@/app/api/derivs/route";
-import type { PulsePayload } from "@/app/api/pulse/route";
+import { GET as calendarGET, type CalendarPayload } from "@/app/api/calendar/route";
+import { GET as cryptoGET } from "@/app/api/crypto/route";
+import { GET as derivsGET, type DerivsPayload } from "@/app/api/derivs/route";
+import { GET as forexGET } from "@/app/api/forex/route";
+import { GET as newsGET } from "@/app/api/news/route";
+import { GET as pulseGET, type PulsePayload } from "@/app/api/pulse/route";
+import { quoteSymbols } from "@/app/api/quote/route";
+import { GET as stocksGET } from "@/app/api/stocks/route";
 import { ASSET_BY_ID } from "@/lib/assets";
 import {
   getRecommendations,
@@ -68,18 +73,28 @@ function cacheSet(key: string, data: RecommendationsResult): void {
   }
 }
 
-/** Absolute base URL for reading this app's own data routes server-side. */
-function baseUrl(): string {
-  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "http://localhost:3000";
-}
+// Per-source budget when gathering context. A single slow/stalled upstream
+// can't hold up the whole card: if a source overruns this, we proceed without
+// it (every consumer below already degrades gracefully on a null payload).
+const SOURCE_TIMEOUT_MS = 5_000;
 
-/** Fetch one own-route JSON payload; null on any failure (never throws). */
-async function readRoute<T>(path: string): Promise<T | null> {
+/**
+ * Read one of this app's own data routes by calling its GET handler DIRECTLY
+ * (no HTTP round-trip back to our own deployment — that was a wasted second
+ * hop). The handlers' upstream fetches still use Next's data cache via their
+ * own `next: { revalidate }`, so cross-user caching is preserved. Races against
+ * a timeout and returns null on any failure or overrun; never throws.
+ */
+async function loadDirect<T>(
+  handler: () => Promise<Response>,
+  timeoutMs = SOURCE_TIMEOUT_MS,
+): Promise<T | null> {
   try {
-    const res = await fetch(`${baseUrl()}${path}`, { next: { revalidate: 300 } });
-    if (!res.ok) return null;
+    const res = await Promise.race([
+      handler(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+    ]);
+    if (!res || !res.ok) return null;
     return (await res.json()) as T;
   } catch {
     return null;
@@ -96,16 +111,17 @@ interface MarketParts {
   stocks: QuotesPayload | null;
 }
 
-/** Read every upstream payload in parallel (each cached upstream). */
+/** Read every upstream payload in parallel, each via a direct handler call with
+ *  a per-source timeout (slow sources are dropped rather than stalling all). */
 async function gather(): Promise<MarketParts> {
   const [pulse, derivs, calendar, news, crypto, forex, stocks] = await Promise.all([
-    readRoute<PulsePayload>("/api/pulse"),
-    readRoute<DerivsPayload>("/api/derivs"),
-    readRoute<CalendarPayload>("/api/calendar"),
-    readRoute<NewsPayload>("/api/news"),
-    readRoute<QuotesPayload>("/api/crypto"),
-    readRoute<QuotesPayload>("/api/forex"),
-    readRoute<QuotesPayload>("/api/stocks"),
+    loadDirect<PulsePayload>(pulseGET),
+    loadDirect<DerivsPayload>(derivsGET),
+    loadDirect<CalendarPayload>(calendarGET),
+    loadDirect<NewsPayload>(newsGET),
+    loadDirect<QuotesPayload>(cryptoGET),
+    loadDirect<QuotesPayload>(forexGET),
+    loadDirect<QuotesPayload>(stocksGET),
   ]);
   return { pulse, derivs, calendar, news, crypto, forex, stocks };
 }
@@ -137,10 +153,12 @@ function moversFrom(quotes: QuotesPayload | null, market: string): MoverLite[] {
     .filter((m) => m.id in ASSET_BY_ID);
 }
 
-/** Build the LLM context snapshot, optionally focused on a watchlist. */
+/** Build the LLM context snapshot, optionally focused on a watchlist.
+ *  `customQuotes` carries live quotes for non-curated watchlist assets. */
 function composeContext(
   parts: MarketParts,
   watchlistIds: string[],
+  customQuotes: Record<string, { price: number; changePct: number | null }> = {},
 ): RecommendationContext {
   const { pulse, derivs, calendar, news } = parts;
   const quotes = quoteLookup(parts);
@@ -181,13 +199,20 @@ function composeContext(
     .slice(0, 12)
     .map((h) => ({ title: h.title, source: h.source, weight: h.weight }));
 
+  // Curated quotes from gather() + any custom-asset quotes fetched on demand.
+  const allQuotes = { ...quotes, ...customQuotes };
+
   const watchlist: WatchlistLite[] = watchlistIds.map((id) => {
     const a = ASSET_BY_ID[id];
-    const q = quotes[id];
+    const q = allQuotes[id];
+    // Derive market/symbol from the id prefix for custom (non-curated) assets.
+    const [prefix, sym] = id.split(":");
+    const market =
+      a?.market ?? (prefix === "crypto" || prefix === "stocks" ? prefix : "unknown");
     return {
       id,
-      symbol: a?.symbol ?? id,
-      market: a?.market ?? "unknown",
+      symbol: a?.symbol ?? sym ?? id,
+      market,
       price: q?.price ?? null,
       changePct: q?.changePct ?? null,
     };
@@ -212,14 +237,43 @@ function composeContext(
   };
 }
 
-/** Keep only known asset ids, dedupe, sort (stable cache key), cap length. */
+// A valid custom (non-curated) id: crypto:SYMBOL or stocks:SYMBOL, alphanumeric.
+const CUSTOM_ID_RE = /^(crypto|stocks):[A-Z0-9]{1,15}$/;
+
+/** Keep curated ids plus well-formed custom crypto/stock ids, dedupe, sort
+ *  (stable cache key), cap length. */
 function sanitizeWatchlist(input: unknown): string[] {
   if (!Array.isArray(input)) return [];
   const seen = new Set<string>();
   for (const v of input) {
-    if (typeof v === "string" && v in ASSET_BY_ID) seen.add(v);
+    if (typeof v !== "string") continue;
+    if (v in ASSET_BY_ID || CUSTOM_ID_RE.test(v)) seen.add(v);
   }
   return [...seen].sort().slice(0, MAX_WATCHLIST);
+}
+
+/** Live quotes for the custom (non-curated) ids in a watchlist, keyed by id.
+ *  Derives the upstream symbol from the id prefix; reuses the shared quote
+ *  path so caching + caps apply. */
+async function quoteCustom(
+  ids: string[],
+): Promise<Record<string, { price: number; changePct: number | null }>> {
+  const custom = ids.filter((id) => !(id in ASSET_BY_ID));
+  if (!custom.length) return {};
+  const cryptoPairs: string[] = [];
+  const stockSyms: string[] = [];
+  for (const id of custom) {
+    const [mkt, sym] = id.split(":");
+    if (!sym) continue;
+    if (mkt === "crypto") cryptoPairs.push(`${sym}USDT`);
+    else if (mkt === "stocks") stockSyms.push(sym);
+  }
+  const map = await quoteSymbols(cryptoPairs, stockSyms);
+  const out: Record<string, { price: number; changePct: number | null }> = {};
+  for (const [id, q] of Object.entries(map)) {
+    out[id] = { price: q.price, changePct: q.changePct };
+  }
+  return out;
 }
 
 /** Shared path for GET (empty watchlist) and POST (personalized). */
@@ -231,8 +285,11 @@ async function respond(watchlistIds: string[]): Promise<NextResponse> {
     return NextResponse.json(cached, { headers: { "X-Cache": "HIT" } });
   }
 
-  const parts = await gather();
-  const ctx = composeContext(parts, watchlistIds);
+  const [parts, customQuotes] = await Promise.all([
+    gather(),
+    quoteCustom(watchlistIds),
+  ]);
+  const ctx = composeContext(parts, watchlistIds, customQuotes);
   const data = await getRecommendations(ctx);
   cacheSet(key, data);
 

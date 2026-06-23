@@ -1,5 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { runAgent, type AgentEvent } from "@/lib/agent/runtime";
+import {
+  acquireLock,
+  appendTurn,
+  isValidSessionId,
+  loadHistory,
+  releaseLock,
+} from "@/lib/agent/session";
 import { llmEnabled } from "@/lib/llm";
 
 // ---------------------------------------------------------------------------
@@ -8,10 +15,16 @@ import { llmEnabled } from "@/lib/llm";
 //   GET  → { enabled } cheap capability probe so the UI can self-hide when no
 //          provider key is configured (matches the AiInsights "look unchanged
 //          when AI is off" posture).
-//   POST → { "message": "why is BTC down?" } ; responds with a Server-Sent
-//          Events stream: zero or more `tool` progress events (so the client can
-//          show "Checking prices…" chips as the agent works) followed by one
-//          terminal `answer` event.
+//   POST → { "message": "why is BTC down?", "sessionId"?: "…" } ; responds with
+//          a Server-Sent Events stream: zero or more `tool` progress events (so
+//          the client can show "Checking prices…" chips as the agent works)
+//          followed by one terminal `answer` event.
+//
+// Multi-turn: when a valid sessionId is supplied we load the conversation's
+// prior turns (agent/session.ts), run the agent with them as context, and
+// persist the new exchange. A per-session lock enforces concurrency 1 — a
+// second message for the same session while one is in flight is refused with a
+// friendly answer rather than running two loops in parallel.
 //
 // The agent runs READ-ONLY tools only and never trades or mutates state
 // (lib/agent/tools.ts). It is grounded in live data and degrades gracefully:
@@ -47,6 +60,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "empty message" }, { status: 400 });
   }
 
+  const sessionId = (body as { sessionId?: unknown })?.sessionId;
+  const sid = isValidSessionId(sessionId) ? sessionId : null;
+
   const encoder = new TextEncoder();
   const send = (
     controller: ReadableStreamDefaultController,
@@ -55,8 +71,24 @@ export async function POST(req: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      // Concurrency 1 per session: refuse a second overlapping loop rather than
+      // double-spend the LLM budget. No store / no sessionId → always granted.
+      const locked = sid ? await acquireLock(sid) : true;
+      if (!locked) {
+        send(controller, {
+          type: "answer",
+          answer: "I'm still working on your previous question — one moment.",
+          degraded: false,
+          stop: "answered",
+        });
+        controller.close();
+        return;
+      }
+
       try {
+        const history = sid ? await loadHistory(sid) : [];
         const result = await runAgent(message, {
+          history,
           onEvent: (e) => {
             try {
               send(controller, e);
@@ -71,6 +103,10 @@ export async function POST(req: NextRequest) {
           degraded: result.degraded,
           stop: result.stop,
         });
+        // Persist the exchange only when the agent actually answered.
+        if (sid && !result.degraded && result.stop !== "unavailable") {
+          await appendTurn(sid, message, result.answer);
+        }
       } catch {
         send(controller, {
           type: "answer",
@@ -79,6 +115,7 @@ export async function POST(req: NextRequest) {
           stop: "unavailable",
         });
       } finally {
+        if (sid) await releaseLock(sid);
         controller.close();
       }
     },
