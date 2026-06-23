@@ -5,9 +5,9 @@ import { GET as derivsGET, type DerivsPayload } from "@/app/api/derivs/route";
 import { GET as forexGET } from "@/app/api/forex/route";
 import { GET as newsGET } from "@/app/api/news/route";
 import { GET as pulseGET, type PulsePayload } from "@/app/api/pulse/route";
-import { quoteSymbols } from "@/app/api/quote/route";
 import { GET as stocksGET } from "@/app/api/stocks/route";
 import { ASSET_BY_ID } from "@/lib/assets";
+import { quoteSymbols } from "@/lib/quotes";
 import {
   getRecommendations,
   type HeadlineLite,
