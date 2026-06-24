@@ -9,6 +9,15 @@ import {
   type Market,
 } from "./assets";
 import type { SessionId } from "./sessions";
+import {
+  DEFAULT_PANEL_PREFS,
+  PRESETS_BY_ID,
+  presetAfterUserEdit,
+  seedWatchlist,
+  type ActivePreset,
+  type PresetId,
+  type PresetPanelPrefs,
+} from "./presets";
 
 /** Result of trying to track a custom asset, so the UI can toast on a cap hit. */
 export interface AddCustomResult {
@@ -32,6 +41,19 @@ interface OpentideState {
 
   sessionFilter: SessionId | null;
   setSessionFilter: (s: SessionId | null) => void;
+
+  /** Trader-profile presets (see lib/presets.ts + docs/TRADER_PRESETS_PLAN.md). */
+  activePreset: ActivePreset; // preset id, "custom" once diverged, null = full board
+  presetChosen: boolean; // has the first-run picker been answered (pick or skip)?
+  panelPrefs: PresetPanelPrefs; // persona panel order/visibility (Phase 3 reads it)
+  /** Apply a preset: writes filter/asset/panel fields and seeds the watchlist
+   *  (additive by default; replaceWatchlist swaps it for the persona's seed). */
+  applyPreset: (id: PresetId, opts?: { replaceWatchlist?: boolean }) => void;
+  /** Dismiss the first-run picker without a persona (keep the full board). */
+  skipPreset: () => void;
+  /** Return to the unfiltered full board: clear filters/panel prefs + preset,
+   *  but keep the watchlist. Used by the "Full board" switcher option. */
+  clearPreset: () => void;
 
   selectedAsset: string;
   setSelectedAsset: (id: string) => void;
@@ -94,8 +116,10 @@ export const useStore = create<OpentideState>()(
       watchlist: [],
       toggleWatch: (id) =>
         set((s) => {
+          // Editing the watchlist diverges from a clean preset → mark "custom".
+          const activePreset = presetAfterUserEdit(s.activePreset);
           if (!s.watchlist.includes(id)) {
-            return { watchlist: [...s.watchlist, id] };
+            return { watchlist: [...s.watchlist, id], activePreset };
           }
           // Un-starring: drop the id and, if it was a custom asset, forget its
           // metadata too so the registry can't accumulate orphans.
@@ -103,9 +127,9 @@ export const useStore = create<OpentideState>()(
           if (s.customAssets[id]) {
             const next = { ...s.customAssets };
             delete next[id];
-            return { watchlist, customAssets: next };
+            return { watchlist, customAssets: next, activePreset };
           }
-          return { watchlist };
+          return { watchlist, activePreset };
         }),
       isWatched: (id) => get().watchlist.includes(id),
 
@@ -127,15 +151,61 @@ export const useStore = create<OpentideState>()(
         set({
           customAssets: { ...s.customAssets, [asset.id]: asset },
           watchlist: [...s.watchlist, asset.id],
+          activePreset: presetAfterUserEdit(s.activePreset),
         });
         return { ok: true };
       },
 
       marketFilter: "all",
-      setMarketFilter: (m) => set({ marketFilter: m }),
+      setMarketFilter: (m) =>
+        set((s) => ({
+          marketFilter: m,
+          activePreset: presetAfterUserEdit(s.activePreset),
+        })),
 
       sessionFilter: null,
-      setSessionFilter: (s) => set({ sessionFilter: s }),
+      setSessionFilter: (sess) =>
+        set((s) => ({
+          sessionFilter: sess,
+          activePreset: presetAfterUserEdit(s.activePreset),
+        })),
+
+      activePreset: null,
+      presetChosen: false,
+      panelPrefs: DEFAULT_PANEL_PREFS,
+      applyPreset: (id, opts) =>
+        set((s) => {
+          const preset = PRESETS_BY_ID[id];
+          if (!preset) return {};
+          const { watchlist, customAssets } = seedWatchlist(
+            s.watchlist,
+            s.customAssets,
+            preset,
+            opts?.replaceWatchlist ?? false,
+          );
+          // Note: writes the underlying fields directly (not via their setters),
+          // so this does NOT trip the custom-drift guards — applying a preset
+          // is the clean state, not a divergence from it.
+          return {
+            watchlist,
+            customAssets,
+            marketFilter: preset.marketFilter,
+            sessionFilter: preset.sessionFilter,
+            selectedAsset: preset.selectedAsset,
+            panelPrefs: preset.panelPrefs,
+            activePreset: id,
+            presetChosen: true,
+          };
+        }),
+      skipPreset: () => set({ presetChosen: true, activePreset: null }),
+      clearPreset: () =>
+        set({
+          activePreset: null,
+          presetChosen: true,
+          marketFilter: "all",
+          sessionFilter: null,
+          panelPrefs: DEFAULT_PANEL_PREFS,
+        }),
 
       selectedAsset: DEFAULT_CHART_ASSET,
       setSelectedAsset: (id) => set({ selectedAsset: id }),
@@ -202,6 +272,9 @@ export const useStore = create<OpentideState>()(
         briefingStats: s.briefingStats,
         selectedAsset: s.selectedAsset,
         notifPrefs: s.notifPrefs,
+        activePreset: s.activePreset,
+        presetChosen: s.presetChosen,
+        panelPrefs: s.panelPrefs,
       }),
     }
   )

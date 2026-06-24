@@ -49,7 +49,12 @@ const csp = [
   // Trusted Types anyway. Every other CSP directive above still applies; this
   // just drops the one defense-in-depth layer that's incompatible here.
   // To revisit, do it behind a per-request nonce on authed/dynamic pages only.
-  `upgrade-insecure-requests`,
+  //
+  // PROD-ONLY: `upgrade-insecure-requests` rewrites every http subresource to
+  // https. On the http dev server that breaks all `_next/*` assets, and Safari
+  // (unlike Chrome) applies it on localhost. Vercel is all-https, so emitting it
+  // only in production is a no-op there and unblocks local dev.
+  ...(isDev ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");
 
 // Static security headers applied to every response.
@@ -73,10 +78,17 @@ const securityHeaders = [
     value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
   },
   // Tell browsers to stick to HTTPS for two years (incl. subdomains).
-  {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
-  },
+  // PROD-ONLY: on localhost this re-arms HSTS every response, so Safari keeps
+  // force-upgrading http://localhost to https and the dev server (http) fails
+  // the TLS handshake. Chrome exempts localhost from HSTS; Safari does not.
+  ...(isDev
+    ? []
+    : [
+        {
+          key: "Strict-Transport-Security",
+          value: "max-age=63072000; includeSubDomains; preload",
+        },
+      ]),
 ];
 
 const nextConfig: NextConfig = {
