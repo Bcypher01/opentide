@@ -9,6 +9,7 @@ import { sessionGreeting } from "@/lib/sessions";
 import { useStore } from "@/lib/store";
 import { IconBell, IconHelp } from "./Icons";
 import Logo, { Wordmark } from "./Logo";
+import PresetSwitcher from "./PresetSwitcher";
 
 // These overlays are never visible on first paint and the two animated ones
 // drag in framer-motion. Loading them with next/dynamic keeps that code out of
@@ -152,6 +153,9 @@ export default function AppShell({
               <p className="hidden min-w-0 truncate text-sm text-muted xl:block xl:max-w-xs">
                 {sessionGreeting(now)}
               </p>
+
+              {/* Trader-profile switcher */}
+              <PresetSwitcher />
 
               {/* Search — ⌘K command palette */}
               <button

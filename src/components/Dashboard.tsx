@@ -24,6 +24,7 @@ import {
   syncPushSubscription,
 } from "@/lib/notifications";
 import { useOpenChart } from "@/lib/nav";
+import { resolvePanelLayout, type PanelId } from "@/lib/presets";
 import { getAllSessionStates, type SessionId } from "@/lib/sessions";
 import { useStore } from "@/lib/store";
 import AiInsights from "./AiInsights";
@@ -32,6 +33,7 @@ import DailyBriefing from "./DailyBriefing";
 import DashboardSkeleton from "./DashboardSkeleton";
 import DerivsPanel from "./DerivsPanel";
 import Hero from "./Hero";
+import PresetPicker from "./PresetPicker";
 
 // ChartPanel embeds a TradingView iframe and sits below the fold; DigestView is
 // a separate full-screen mode most sessions never enter. Both load on demand.
@@ -104,6 +106,8 @@ export default function Dashboard() {
     selectedAsset,
     heroDismissed,
     dismissHero,
+    presetChosen,
+    panelPrefs,
     useUTC,
     digestMode,
     setDigestMode,
@@ -293,8 +297,12 @@ export default function Dashboard() {
 
   return (
     <AppShell ticker={<Ticker quoteOf={quoteOf} onSelect={openChart} />}>
-      {/* First-visit story */}
-      {!heroDismissed && <Hero onDismiss={dismissHero} />}
+      {/* First run: persona picker once, then the intro story (if not dismissed) */}
+      {!presetChosen ? (
+        <PresetPicker />
+      ) : (
+        !heroDismissed && <Hero onDismiss={dismissHero} />
+      )}
 
       {/* Return visit: what moved while you were away */}
       {awayDiff && (
@@ -338,11 +346,16 @@ export default function Dashboard() {
           Self-hides when no LLM key is configured. Taps scroll to the chart. */}
       <AiInsights onSelectAsset={openChartAndScroll} />
 
-      {/* Top movers */}
-      <Movers quoteOf={quoteOf} onSelect={openChart} />
-
-      {/* Derivatives pulse: funding extremes + open interest */}
-      <DerivsPanel data={derivs.data} onSelect={openChart} />
+      {/* Movers + derivatives pulse — order/visibility follow the active preset
+          (e.g. Crypto 24/7 surfaces derivs first; London FX hides them). */}
+      {resolvePanelLayout(["movers", "derivs"] as PanelId[], panelPrefs).map(
+        (panel) =>
+          panel === "movers" ? (
+            <Movers key="movers" quoteOf={quoteOf} onSelect={openChart} />
+          ) : (
+            <DerivsPanel key="derivs" data={derivs.data} onSelect={openChart} />
+          ),
+      )}
 
       {/* Main 3-column shell: markets | chart | news */}
       <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-12">

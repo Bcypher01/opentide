@@ -10,6 +10,7 @@ import {
   searchCalendar,
   searchCryptoUniverse,
   searchNews,
+  searchPresets,
   searchStockUniverse,
   type CalendarLike,
   type CryptoHit,
@@ -18,7 +19,7 @@ import {
   type StockHit,
 } from "@/lib/search";
 import { useStore } from "@/lib/store";
-import { IconCalendar, IconCandles, IconNews, IconStar } from "./Icons";
+import { IconCalendar, IconCandles, IconNews, IconStar, IconZap } from "./Icons";
 
 // --- Session-level caches (survive palette open/close, reset on reload) -----
 const NEWS_TTL = 5 * 60_000;
@@ -57,6 +58,7 @@ const KIND_META: Record<
   symbol: { badge: "Market", color: "#4fa8e8" },
   news: { badge: "News", color: "#e8b44f" },
   calendar: { badge: "Event", color: "#7c6ff0" },
+  preset: { badge: "Persona", color: "#00d4aa" },
 };
 
 export default function CommandPalette() {
@@ -66,6 +68,7 @@ export default function CommandPalette() {
   const watchlist = useStore((s) => s.watchlist);
   const toggleWatch = useStore((s) => s.toggleWatch);
   const addCustomAsset = useStore((s) => s.addCustomAsset);
+  const applyPreset = useStore((s) => s.applyPreset);
   const router = useRouter();
 
   const [q, setQ] = useState("");
@@ -165,6 +168,7 @@ export default function CommandPalette() {
     if (!query) return [];
     const now = Date.now();
     const assets = rank(searchAssets(query, ALL_ASSETS), 6);
+    const presetRes = rank(searchPresets(query), 4);
     const universe = rank(
       [
         ...searchStockUniverse(query, stockHits),
@@ -176,6 +180,7 @@ export default function CommandPalette() {
     const calRes = rank(searchCalendar(query, cal), 4);
     return [
       { label: "Assets", results: assets },
+      { label: "Trader profiles", results: presetRes },
       { label: "Markets — full universe", results: universe },
       { label: "News", results: newsRes },
       { label: "Calendar", results: calRes },
@@ -207,7 +212,12 @@ export default function CommandPalette() {
   const run = useCallback(
     (r: SearchResult | undefined) => {
       if (!r) return;
-      if (r.action === "chart" && r.chartId) {
+      if (r.action === "preset" && r.presetId) {
+        // Apply additively from the palette — lossless, so no Replace/Keep prompt
+        // (that choice lives in the header switcher).
+        applyPreset(r.presetId);
+        close();
+      } else if (r.action === "chart" && r.chartId) {
         openModal(r.chartId);
         close();
       } else if (r.action === "link" && r.href) {
@@ -223,7 +233,7 @@ export default function CommandPalette() {
         }, 350);
       }
     },
-    [openModal, close, router]
+    [openModal, close, router, applyPreset]
   );
 
   // Star/unstar a full-universe hit without leaving the palette. Enforces the
@@ -382,6 +392,8 @@ export default function CommandPalette() {
                               <IconNews size={14} />
                             ) : r.kind === "calendar" ? (
                               <IconCalendar size={14} />
+                            ) : r.kind === "preset" ? (
+                              <IconZap size={14} />
                             ) : (
                               <IconCandles size={14} />
                             )}

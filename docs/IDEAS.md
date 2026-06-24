@@ -10,6 +10,17 @@ The litmus test for every feature: *does this answer "what do I need to know bef
 
 ---
 
+## Status (June 2026)
+
+**Shipped (14 of 17):** #1 daily briefing, #2 economic calendar on the clock, #3 sentiment strip, #4 "while you were away" diff, #5 session statistics engine (crypto), #6 funding rates + OI, #7 cross-market risk dial, #8 heatmaps (crypto + stocks + forex strength), #9 yield & macro panel (folded into the pulse strip), #10 session push alerts (PWA), #12 watchlist daily digest, #15 daily wrap / OG cards, #16 embeddable session-clock widget, #17 ICS feed. Also built beyond this doc: an assistant/agent layer, AI insights, Buzz, command palette, and search.
+
+**Remaining (3):**
+- #11 Trader-profile presets — no backend needed, value on day one. **Do this first.**
+- #13 Streaks / "day started" check-in — low effort, keep whisper-quiet.
+- #14 Post-close journal — **pinned until account creation + sync exists.** A localStorage-only journal can't persist months of entries safely, and Opentide can't see real trades (no broker link), so the entry is necessarily a thin mood/discipline check-in. It only pays off once (a) entries sync across devices and (b) the session-correlation insight has weeks of data to work with. Revisit when accounts ship.
+
+---
+
 ## Tier 1 — The Morning Ritual (highest leverage)
 
 ### 1. Daily Briefing ("Your day in 60 seconds")
@@ -79,8 +90,9 @@ A dedicated "my morning" view: only watchlist assets, their overnight change, ta
 A subtle "Day 12" streak for opening your briefing, maybe a satisfying "mark day started" interaction. Duolingo-style mechanics work but can cheapen a calm-intensity brand — keep it whisper-quiet, opt-in, never guilt-trippy.
 - **Effort:** low.
 
-### 14. Lightweight journal prompt
+### 14. Lightweight journal prompt — ⏸ PINNED until accounts/sync
 Post-close (detected by session clock!): "How did today go?" — one emoji + optional note, stored locally, with a calendar heat view of your month. Journaling is the #1 advice given to every trader and nobody has a frictionless free version. Pairs naturally with sessions ("you rate London days 2x better than NY days").
+- **Blocked on:** persistence. A localStorage-only journal silently loses months of entries on cache-clear or device change — unacceptable for this data type. Opentide also can't see real trades (no broker link), so the entry is a thin mood/discipline check-in, not a trade ledger. Only worth building once entries sync across devices and there's enough history for the session-correlation insight to land.
 - **Effort:** medium. High emotional lock-in; their data lives in your product.
 
 ---

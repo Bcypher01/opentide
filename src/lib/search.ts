@@ -9,9 +9,10 @@
 
 import type { AssetDef, CustomAsset, Market } from "./assets";
 import { ASSET_BY_ID } from "./assets";
+import { PRESETS, type PresetId } from "./presets";
 
-export type ResultKind = "asset" | "symbol" | "news" | "calendar";
-export type ResultAction = "chart" | "link" | "calendar";
+export type ResultKind = "asset" | "symbol" | "news" | "calendar" | "preset";
+export type ResultAction = "chart" | "link" | "calendar" | "preset";
 
 export interface SearchResult {
   kind: ResultKind;
@@ -30,6 +31,8 @@ export interface SearchResult {
   market?: Market;
   /** Present on full-universe symbol hits — metadata to star/track the asset. */
   track?: CustomAsset;
+  /** action === "preset": the trader profile to apply. */
+  presetId?: PresetId;
 }
 
 /** Slim shapes the palette feeds in — kept local so search.ts has no UI deps. */
@@ -161,6 +164,49 @@ export function searchCalendar(
       score,
       action: "calendar",
       eventTs: e.ts,
+    });
+  }
+  return out;
+}
+
+// --- Trader profiles (commands, not data) ----------------------------------
+
+/** Casual words that should surface a given persona beyond its exact label. */
+const PRESET_SYNONYMS: Record<PresetId, string[]> = {
+  "london-fx": ["fx", "forex", "scalp", "scalper", "london", "majors", "pairs"],
+  "ny-equities": ["equities", "stocks", "equity", "ny", "new york", "shares"],
+  "crypto-247": ["crypto", "degen", "coins", "altcoin", "bitcoin", "24/7"],
+  swing: ["swing", "daily", "dailies", "position", "macro"],
+};
+
+/** Generic words that should list every persona (e.g. "preset", "profile"). */
+const PRESET_TRIGGERS = ["persona", "preset", "profile", "layout", "trader"];
+
+export function searchPresets(query: string): SearchResult[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const listAll = PRESET_TRIGGERS.some(
+    (w) => w.startsWith(q) || (q.length >= 3 && w.includes(q)),
+  );
+  const out: SearchResult[] = [];
+  for (const p of PRESETS) {
+    let score = Math.max(
+      scoreField(query, p.label),
+      Math.round(scoreField(query, p.id.replace(/-/g, " ")) * 0.9),
+    );
+    for (const syn of PRESET_SYNONYMS[p.id]) {
+      score = Math.max(score, Math.round(scoreField(query, syn) * 0.85));
+    }
+    if (listAll) score = Math.max(score, 40);
+    if (score <= 0) continue;
+    out.push({
+      kind: "preset",
+      key: `preset:${p.id}`,
+      title: p.label,
+      subtitle: p.blurb,
+      score,
+      action: "preset",
+      presetId: p.id,
     });
   }
   return out;
