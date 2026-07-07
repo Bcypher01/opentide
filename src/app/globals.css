@@ -27,6 +27,7 @@ body {
   color: var(--color-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  --session-tint: var(--color-accent);
 }
 
 /* Numbers never jitter as prices tick */
@@ -148,6 +149,11 @@ body.overlay-open .marquee-track {
 
 /* Flat page background (gradients removed by design) */
 .bg-glow {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--session-tint) 10%, transparent), transparent 420px),
+    var(--color-bg);
+}
+body:not(.preview-mode) .bg-glow {
   background: var(--color-bg);
 }
 

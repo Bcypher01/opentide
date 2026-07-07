@@ -17,21 +17,21 @@ const PRESET_ICON: Record<PresetId, IconCmp> = {
 /**
  * First-run persona picker (Phase 1). Shown once, when the user hasn't yet
  * answered it (`!presetChosen`). Picking applies a preset (additive seed — never
- * clobbers an existing watchlist); Skip keeps the full board. Either way we also
- * dismiss the intro Hero so first-run has a single inline surface.
+ * clobbers an existing watchlist); Skip keeps the full board. The intro Hero is
+ * NOT dismissed here: answering the picker flips `presetChosen`, and the
+ * Dashboard then shows the Hero (still user-dismissible) as the second step of
+ * first-run — picker first, welcome story second. Calling `dismissHero()` from
+ * here meant new users never saw the Hero at all.
  */
 export default function PresetPicker() {
   const applyPreset = useStore((s) => s.applyPreset);
   const skipPreset = useStore((s) => s.skipPreset);
-  const dismissHero = useStore((s) => s.dismissHero);
 
   const pick = (id: PresetId) => {
     applyPreset(id);
-    dismissHero();
   };
   const skip = () => {
     skipPreset();
-    dismissHero();
   };
 
   return (

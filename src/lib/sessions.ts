@@ -25,7 +25,7 @@ export const SESSIONS: SessionDef[] = [
     tz: "Australia/Sydney",
     openHour: 8,
     closeHour: 17,
-    color: "#7C6FF0",
+    color: "#9BC24F",
     hint: "AUD & NZD pairs wake up",
   },
   {

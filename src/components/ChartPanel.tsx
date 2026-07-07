@@ -5,6 +5,7 @@ import { ASSET_BY_ID } from "@/lib/assets";
 import { CHART_INTERVALS, resolveChartTarget, tvEmbedUrl } from "@/lib/chart";
 import { formatChangePct, formatPrice } from "@/lib/format";
 import { useInView } from "@/lib/hooks";
+import type { SessionId } from "@/lib/sessions";
 
 interface Props {
   assetId: string;
@@ -12,10 +13,22 @@ interface Props {
   changePct: number | null;
   /** trending-in-news suggestions: [{id, count}] */
   trending: Array<{ id: string; count: number }>;
+  activeSessions?: SessionId[];
+  isPreview?: boolean;
+  tint?: string;
   onSelect: (id: string) => void;
 }
 
-export default function ChartPanel({ assetId, price, changePct, trending, onSelect }: Props) {
+export default function ChartPanel({
+  assetId,
+  price,
+  changePct,
+  trending,
+  activeSessions = [],
+  isPreview = false,
+  tint = "var(--color-accent)",
+  onSelect,
+}: Props) {
   const [interval, setInterval] = useState("60");
   const { symbol, displaySymbol, displayName, market } = resolveChartTarget(assetId);
   const up = (changePct ?? 0) >= 0;
@@ -23,11 +36,25 @@ export default function ChartPanel({ assetId, price, changePct, trending, onSele
   // Defer the TradingView iframe until the chart scrolls near the viewport,
   // keeping its render-blocking JS + WebSockets off the initial-load path.
   const [chartRef, chartInView] = useInView<HTMLDivElement>("300px");
+  const sortedTrending = isPreview
+    ? [...trending].sort((a, b) => {
+        const aa = ASSET_BY_ID[a.id];
+        const bb = ASSET_BY_ID[b.id];
+        const aFit = aa?.sessions.some((s) => activeSessions.includes(s)) ? 1 : 0;
+        const bFit = bb?.sessions.some((s) => activeSessions.includes(s)) ? 1 : 0;
+        return bFit - aFit || b.count - a.count;
+      })
+    : trending;
 
   return (
     <section
       id="chart"
       className="overflow-hidden rounded-2xl border border-border bg-surface"
+      style={{
+        backgroundImage: isPreview
+          ? `linear-gradient(180deg, ${tint}18, transparent 34%)`
+          : undefined,
+      }}
       aria-label={`Chart for ${displaySymbol}`}
     >
       {/* Chart header */}
@@ -39,12 +66,19 @@ export default function ChartPanel({ assetId, price, changePct, trending, onSele
           </div>
           <div className="mt-0.5 flex items-baseline gap-2">
             {price !== null && (
-              <span className="num text-lg leading-none">{formatPrice(price, market)}</span>
+              <span className={`num text-lg leading-none ${isPreview ? "opacity-70" : ""}`}>
+                {formatPrice(price, market)}
+              </span>
             )}
             {changePct !== null && (
-              <span className={`num text-sm ${up ? "text-bull" : "text-bear"}`}>
+              <span className={`num text-sm ${up ? "text-bull" : "text-bear"} ${isPreview ? "opacity-70" : ""}`}>
                 {up ? "▲ " : "▼ "}
                 {formatChangePct(changePct)}
+              </span>
+            )}
+            {isPreview && (
+              <span className="rounded-full border border-border bg-surface2 px-1.5 py-0.5 text-[10px] text-muted">
+                live locked
               </span>
             )}
           </div>
@@ -66,15 +100,16 @@ export default function ChartPanel({ assetId, price, changePct, trending, onSele
       </div>
 
       {/* In the news — chart suggestions driven by the news engine */}
-      {trending.length > 0 && (
+      {sortedTrending.length > 0 && (
         <div className="flex items-center gap-2 overflow-x-auto border-b border-border px-4 py-2">
           <span className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-muted">
-            In the news
+            {isPreview ? "Likely in focus" : "In the news"}
           </span>
-          {trending.map(({ id, count }) => {
+          {sortedTrending.map(({ id, count }) => {
             const a = ASSET_BY_ID[id];
             if (!a) return null;
             const active = id === assetId;
+            const sessionFit = a.sessions.some((s) => activeSessions.includes(s));
             return (
               <button
                 key={id}
@@ -83,7 +118,9 @@ export default function ChartPanel({ assetId, price, changePct, trending, onSele
                 className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
                   active
                     ? "border-accent/60 bg-accent/10 text-accent"
-                    : "border-border bg-surface2 text-muted hover:text-text"
+                    : sessionFit && isPreview
+                      ? "border-accent/40 bg-accent/10 text-text"
+                      : "border-border bg-surface2 text-muted hover:text-text"
                 }`}
               >
                 {a.symbol}
