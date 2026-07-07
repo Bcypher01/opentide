@@ -28,7 +28,6 @@ const NAV = [
   { href: "/markets", label: "Markets" },
   { href: "/watchlist", label: "Watchlist" },
   { href: "/news", label: "News" },
-  { href: "/faq", label: "FAQ" },
 ];
 
 export default function AppShell({
@@ -260,6 +259,13 @@ export default function AppShell({
           · CNBC · MarketWatch · FXStreet. Charts by TradingView. Not investment advice.
         </p>
         <p className="mt-2">
+          <Link
+            href="/faq"
+            className="underline-offset-2 transition-colors hover:text-text hover:underline"
+          >
+            FAQ
+          </Link>{" "}
+          ·{" "}
           Built by{" "}
           <a
             href="https://olumideb.vercel.app/"

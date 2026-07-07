@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ASSET_BY_ID, type Market } from "@/lib/assets";
 import { timeAgo } from "@/lib/format";
 import { MARKET_COLOR, type NewsWeight } from "@/lib/news";
+import type { SessionId } from "@/lib/sessions";
 import { NewsItemSkeleton } from "./DashboardSkeleton";
 import Explain from "./Explain";
 
@@ -24,6 +25,8 @@ interface Props {
   loading: boolean;
   error: boolean;
   now: number;
+  activeSessions?: SessionId[];
+  isPreview?: boolean;
   onSelectAsset: (id: string) => void;
   /** fixed-height class, e.g. "xl:h-[604px]" — list scrolls inside it */
   heightClass?: string;
@@ -43,6 +46,8 @@ export default function NewsFeed({
   loading,
   error,
   now,
+  activeSessions = [],
+  isPreview = false,
   onSelectAsset,
   heightClass = "",
   footer,
@@ -90,48 +95,62 @@ export default function NewsFeed({
           </p>
         )}
 
-        {visible.map((it, i) => (
-          <article
-            key={`${it.link}-${i}`}
-            className="rounded-lg px-2 py-2.5 transition-colors hover:bg-surface2"
-          >
-            <a href={it.link} target="_blank" rel="noreferrer" className="block">
-              <h3 className="text-[13px] leading-snug text-text">{it.title}</h3>
-            </a>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
-              <span
-                className="inline-block h-1.5 w-1.5 rounded-full"
-                style={{ backgroundColor: MARKET_COLOR[it.market] }}
-              />
-              <span>{it.source}</span>
-              <span className="num">{timeAgo(it.ts, now)}</span>
-              {it.assets.slice(0, 3).map((id) => {
-                const a = ASSET_BY_ID[id];
-                if (!a) return null;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => onSelectAsset(id)}
-                    title={`View ${a.symbol} chart`}
-                    className="rounded-full border border-border bg-surface2 px-2 py-0.5 text-[10px] text-muted transition-colors hover:border-accent/50 hover:text-accent"
-                  >
-                    {a.symbol} ↗
-                  </button>
-                );
-              })}
-              <Explain
-                className="w-full"
-                target={{
-                  kind: "headline",
-                  title: it.title,
-                  source: it.source,
-                  market: it.market,
-                  assets: it.assets.slice(0, 3),
-                }}
-              />
-            </div>
-          </article>
-        ))}
+        {visible.map((it, i) => {
+          const sessionFit =
+            !isPreview ||
+            it.assets.some((id) =>
+              ASSET_BY_ID[id]?.sessions.some((s) => activeSessions.includes(s)),
+            );
+          return (
+            <article
+              key={`${it.link}-${i}`}
+              className={`rounded-lg px-2 py-2.5 transition-colors hover:bg-surface2 ${
+                isPreview && !sessionFit ? "opacity-[0.45]" : ""
+              } ${isPreview && sessionFit ? "bg-accent/5 ring-1 ring-accent/10" : ""}`}
+            >
+              <a href={it.link} target="_blank" rel="noreferrer" className="block">
+                <h3 className="text-[13px] leading-snug text-text">{it.title}</h3>
+              </a>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
+                <span
+                  className="inline-block h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: MARKET_COLOR[it.market] }}
+                />
+                <span>{it.source}</span>
+                <span className="num">{timeAgo(it.ts, now)}</span>
+                {isPreview && sessionFit && (
+                  <span className="rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent">
+                    session fit
+                  </span>
+                )}
+                {it.assets.slice(0, 3).map((id) => {
+                  const a = ASSET_BY_ID[id];
+                  if (!a) return null;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => onSelectAsset(id)}
+                      title={`View ${a.symbol} chart`}
+                      className="rounded-full border border-border bg-surface2 px-2 py-0.5 text-[10px] text-muted transition-colors hover:border-accent/50 hover:text-accent"
+                    >
+                      {a.symbol} ↗
+                    </button>
+                  );
+                })}
+                <Explain
+                  className="w-full"
+                  target={{
+                    kind: "headline",
+                    title: it.title,
+                    source: it.source,
+                    market: it.market,
+                    assets: it.assets.slice(0, 3),
+                  }}
+                />
+              </div>
+            </article>
+          );
+        })}
       </div>
 
       {footer}

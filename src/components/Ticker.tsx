@@ -11,10 +11,11 @@ interface Quote {
 interface Props {
   quoteOf: Record<string, Quote>;
   onSelect: (id: string) => void;
+  isPreview?: boolean;
 }
 
 /** Full-width marquee ticker tape across the very top — pure CSS, no deps. */
-export default function Ticker({ quoteOf, onSelect }: Props) {
+export default function Ticker({ quoteOf, onSelect, isPreview = false }: Props) {
   const entries = ALL_ASSETS.filter((a) => quoteOf[a.id]);
 
   if (entries.length === 0) {
@@ -45,9 +46,17 @@ export default function Ticker({ quoteOf, onSelect }: Props) {
   );
 
   return (
-    <div className="w-full overflow-hidden border-b border-border bg-surface" aria-hidden="true">
+    <div
+      className={`relative w-full overflow-hidden border-b border-border bg-surface ${isPreview ? "opacity-75" : ""}`}
+      aria-hidden="true"
+    >
+      {isPreview && (
+        <span className="absolute right-3 top-1 z-10 rounded-full border border-border bg-bg/90 px-2 py-0.5 text-[10px] text-muted">
+          live locked
+        </span>
+      )}
       <div className="marquee flex h-9 items-center whitespace-nowrap">
-        <div className="marquee-track flex items-center">
+        <div className={`marquee-track flex items-center ${isPreview ? "[animation-play-state:paused]" : ""}`}>
           {strip}
           {strip}
         </div>

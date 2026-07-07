@@ -52,6 +52,8 @@ export interface AssetSessionStats {
 
 export interface SessionStatsPayload {
   assets: AssetSessionStats[];
+  /** Normalized UTC hour-of-day high-low range profile, max = 1. */
+  hourlyVolProfile: number[];
   lookbackDays: number;
   ts: number;
   error?: string;
@@ -170,6 +172,29 @@ function statsForAsset(klines: Kline[]): SessionStat[] {
   });
 }
 
+function hourlyRangeProfile(klinesByAsset: Kline[][]): number[] {
+  const sums = Array.from({ length: 24 }, () => 0);
+  const counts = Array.from({ length: 24 }, () => 0);
+
+  for (const klines of klinesByAsset) {
+    for (const k of klines) {
+      const openTime = k[0];
+      const hour = new Date(openTime).getUTCHours();
+      const o = parseFloat(k[1]);
+      const h = parseFloat(k[2]);
+      const l = parseFloat(k[3]);
+      if (![o, h, l].every(Number.isFinite) || o <= 0) continue;
+      sums[hour] += ((h - l) / o) * 100;
+      counts[hour] += 1;
+    }
+  }
+
+  const means = sums.map((sum, i) => (counts[i] ? sum / counts[i] : 0));
+  const max = Math.max(...means);
+  if (max <= 0) return Array.from({ length: 24 }, () => 1);
+  return means.map((v) => Number((v / max).toFixed(4)));
+}
+
 async function fetchKlines(symbol: string): Promise<Kline[] | null> {
   const path = `/api/v3/klines?symbol=${symbol}USDT&interval=1h&limit=${KLIMIT}`;
   for (const host of HOSTS) {
@@ -190,26 +215,37 @@ export async function GET() {
         const k = await fetchKlines(a.symbol);
         if (!k || k.length === 0) return null;
         return {
-          assetId: a.assetId,
-          symbol: a.symbol,
-          name: a.name,
-          stats: statsForAsset(k),
-        } satisfies AssetSessionStats;
+          klines: k,
+          asset: {
+            assetId: a.assetId,
+            symbol: a.symbol,
+            name: a.name,
+            stats: statsForAsset(k),
+          } satisfies AssetSessionStats,
+        };
       })
     );
 
-    const assets = results.filter((x): x is AssetSessionStats => x !== null);
+    const good = results.filter((x): x is { klines: Kline[]; asset: AssetSessionStats } => x !== null);
+    const assets = good.map((x) => x.asset);
     if (assets.length === 0) throw new Error("no upstream data");
 
     const payload: SessionStatsPayload = {
       assets,
+      hourlyVolProfile: hourlyRangeProfile(good.map((x) => x.klines)),
       lookbackDays: Math.round(KLIMIT / 24),
       ts: Date.now(),
     };
     return NextResponse.json(payload);
   } catch {
     return NextResponse.json(
-      { error: "upstream_unavailable", assets: [], lookbackDays: 0, ts: Date.now() }
+      {
+        error: "upstream_unavailable",
+        assets: [],
+        hourlyVolProfile: [],
+        lookbackDays: 0,
+        ts: Date.now(),
+      }
     );
   }
 }

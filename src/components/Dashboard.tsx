@@ -15,6 +15,7 @@ import {
 import type { CalendarPayload } from "@/app/api/calendar/route";
 import type { DerivsPayload } from "@/app/api/derivs/route";
 import type { PulsePayload } from "@/app/api/pulse/route";
+import type { SessionStatsPayload } from "@/app/api/sessionstats/route";
 import { timeAgo } from "@/lib/format";
 import { useAwayDiff, useBinanceLive, useNow, usePolling, useServiceWorker } from "@/lib/hooks";
 import {
@@ -24,9 +25,16 @@ import {
   syncPushSubscription,
 } from "@/lib/notifications";
 import { useOpenChart } from "@/lib/nav";
+import { usePreviewStore } from "@/lib/previewStore";
 import { resolvePanelLayout, type PanelId } from "@/lib/presets";
-import { getAllSessionStates, type SessionId } from "@/lib/sessions";
+import {
+  formatCountdown,
+  getAllSessionStates,
+  type SessionId,
+  type SessionState,
+} from "@/lib/sessions";
 import { useStore } from "@/lib/store";
+import { getTideReading, sessionColor } from "@/lib/tide";
 import AiInsights from "./AiInsights";
 import AppShell from "./AppShell";
 import DailyBriefing from "./DailyBriefing";
@@ -75,6 +83,23 @@ const MARKET_LABEL: Record<Market, string> = {
   stocks: "Stocks",
 };
 
+function previewStamp(d: Date, useUTC: boolean): string {
+  const time = useUTC
+    ? `${d.toISOString().slice(11, 16)} UTC`
+    : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return `${d.toLocaleDateString([], { weekday: "short" })} ${time}`;
+}
+
+function assetSessionLabel(asset: AssetDef, states: SessionState[], nowMs: number): string {
+  const relevant = states.filter((s) => asset.sessions.includes(s.def.id));
+  const open = relevant.filter((s) => s.isOpen);
+  if (open.length) return `${open.map((s) => s.def.name).join("+")} open`;
+  const next = relevant
+    .filter((s) => s.opensAt !== null)
+    .sort((a, b) => (a.opensAt as number) - (b.opensAt as number))[0];
+  return next?.opensAt ? `wakes in ${formatCountdown(next.opensAt - nowMs)}` : "closed";
+}
+
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -83,7 +108,14 @@ export default function Dashboard() {
   useServiceWorker();
 
   const now = useNow(1000);
-  const states = useMemo(() => getAllSessionStates(now), [now]);
+  const previewTime = usePreviewStore((s) => s.previewTime);
+  const clearPreview = usePreviewStore((s) => s.clearPreview);
+  const effectiveNow = useMemo(
+    () => (previewTime ? new Date(previewTime) : now),
+    [previewTime, now],
+  );
+  const isPreview = previewTime !== null;
+  const states = useMemo(() => getAllSessionStates(effectiveNow), [effectiveNow]);
 
   const crypto = usePolling<ApiPayload>("/api/crypto", 30_000);
   const forex = usePolling<ApiPayload>("/api/forex", 300_000);
@@ -92,6 +124,7 @@ export default function Dashboard() {
   const pulse = usePolling<PulsePayload>("/api/pulse", 600_000);
   const derivs = usePolling<DerivsPayload>("/api/derivs", 300_000);
   const calendar = usePolling<CalendarPayload>("/api/calendar", 1_800_000);
+  const sessionStats = usePolling<SessionStatsPayload>("/api/sessionstats", 3_600_000);
   const live = useBinanceLive();
   const openChart = useOpenChart();
 
@@ -114,6 +147,33 @@ export default function Dashboard() {
     notifPrefs,
     openPalette,
   } = useStore();
+
+  useEffect(() => {
+    if (!isPreview) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") clearPreview();
+    };
+    document.addEventListener("keydown", onKey);
+    const t = setTimeout(clearPreview, 60_000);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      clearTimeout(t);
+    };
+  }, [isPreview, clearPreview, previewTime]);
+
+  const tideReading = useMemo(
+    () => getTideReading(effectiveNow, sessionStats.data?.hourlyVolProfile),
+    [effectiveNow, sessionStats.data?.hourlyVolProfile],
+  );
+  const tint = sessionColor(tideReading.dominant);
+  useEffect(() => {
+    document.body.style.setProperty("--session-tint", tint);
+    document.body.classList.toggle("preview-mode", isPreview);
+    return () => {
+      document.body.style.removeProperty("--session-tint");
+      document.body.classList.remove("preview-mode");
+    };
+  }, [tint, isPreview]);
 
   // Re-schedule alerts whenever calendar data or prefs change
   const calEvents = calendar.data?.events ?? [];
@@ -278,7 +338,7 @@ export default function Dashboard() {
   // Digest (morning) mode — focused view when the user has a watchlist
   if (digestMode) {
     return (
-      <AppShell ticker={<Ticker quoteOf={quoteOf} onSelect={openChart} />}>
+      <AppShell ticker={<Ticker quoteOf={quoteOf} onSelect={openChart} isPreview={isPreview} />}>
         <DigestView
           watchlist={watchlist}
           customAssets={customAssets}
@@ -286,7 +346,7 @@ export default function Dashboard() {
           news={news.data?.items ?? []}
           states={states}
           calendar={calendar.data}
-          now={now}
+          now={effectiveNow}
           useUTC={useUTC}
           onSelectAsset={openChart}
           onExit={() => setDigestMode(false)}
@@ -296,7 +356,27 @@ export default function Dashboard() {
   }
 
   return (
-    <AppShell ticker={<Ticker quoteOf={quoteOf} onSelect={openChart} />}>
+    <AppShell ticker={<Ticker quoteOf={quoteOf} onSelect={openChart} isPreview={isPreview} />}>
+      {isPreview && (
+        <div className="sticky top-[58px] z-30 mb-4 rounded-xl border border-accent/35 bg-bg/90 px-3 py-2 text-sm shadow-lg backdrop-blur">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="num rounded-full bg-accent/10 px-2 py-0.5 text-[11px] text-accent">
+              Preview
+            </span>
+            <span className="text-text">
+              {previewStamp(effectiveNow, useUTC)} ·{" "}
+              {states.filter((s) => s.isOpen).map((s) => s.def.name).join(" + ") || "between sessions"}
+            </span>
+            <span className="text-muted">Live prices are locked to now.</span>
+            <button
+              onClick={clearPreview}
+              className="ml-auto rounded-full border border-border bg-surface2 px-3 py-1 text-xs text-text transition-colors hover:border-accent/50"
+            >
+              Back to now
+            </button>
+          </div>
+        </div>
+      )}
       {/* First run: persona picker once, then the intro story (if not dismissed) */}
       {!presetChosen ? (
         <PresetPicker />
@@ -316,7 +396,7 @@ export default function Dashboard() {
 
       {/* Daily briefing: first visit of the local day, collapses after read */}
       <DailyBriefing
-        now={now}
+        now={effectiveNow}
         states={states}
         pulse={pulse.data}
         quoteOf={quoteOf}
@@ -332,13 +412,14 @@ export default function Dashboard() {
       {/* Session clock — with economic calendar markers + countdowns */}
       <div className="mt-4">
         <SessionClock
-          now={now}
+          now={effectiveNow}
           states={states}
           useUTC={useUTC}
           selected={sessionFilter}
           onSelect={handleSessionSelect}
           calendar={calendar.data}
           calendarLoading={calendar.data === null && !calendar.error}
+          hourlyVolProfile={sessionStats.data?.hourlyVolProfile}
         />
       </div>
 
@@ -351,7 +432,13 @@ export default function Dashboard() {
       {resolvePanelLayout(["movers", "derivs"] as PanelId[], panelPrefs).map(
         (panel) =>
           panel === "movers" ? (
-            <Movers key="movers" quoteOf={quoteOf} onSelect={openChart} />
+            <Movers
+              key="movers"
+              quoteOf={quoteOf}
+              onSelect={openChart}
+              states={states}
+              isPreview={isPreview}
+            />
           ) : (
             <DerivsPanel key="derivs" data={derivs.data} onSelect={openChart} />
           ),
@@ -406,6 +493,8 @@ export default function Dashboard() {
                       price={quoteOf[a.id]?.price ?? null}
                       changePct={quoteOf[a.id]?.changePct ?? null}
                       live={a.market === "crypto" && a.symbol in live}
+                      isPreview={isPreview}
+                      sessionLabel={isPreview ? assetSessionLabel(a, states, effectiveNow.getTime()) : null}
                       watched
                       onToggleWatch={toggleWatch}
                     />
@@ -525,6 +614,10 @@ export default function Dashboard() {
                             price={quoteOf[a.id]?.price ?? null}
                             changePct={quoteOf[a.id]?.changePct ?? null}
                             live={a.market === "crypto" && a.symbol in live}
+                            isPreview={isPreview}
+                            sessionLabel={
+                              isPreview ? assetSessionLabel(a, states, effectiveNow.getTime()) : null
+                            }
                             watched={watchlist.includes(a.id)}
                             onToggleWatch={toggleWatch}
                           />
@@ -545,6 +638,9 @@ export default function Dashboard() {
             price={selQuote?.price ?? null}
             changePct={selQuote?.changePct ?? null}
             trending={news.data?.trending ?? []}
+            activeSessions={states.filter((s) => s.isOpen).map((s) => s.def.id)}
+            isPreview={isPreview}
+            tint={tint}
             onSelect={openChart}
           />
           <p className="mt-2 px-1 text-[11px] text-muted/60">
@@ -559,6 +655,8 @@ export default function Dashboard() {
             loading={news.data === null}
             error={news.error}
             now={now.getTime()}
+            activeSessions={states.filter((s) => s.isOpen).map((s) => s.def.id)}
+            isPreview={isPreview}
             onSelectAsset={openChart}
             heightClass="xl:h-[604px]"
             footer={
