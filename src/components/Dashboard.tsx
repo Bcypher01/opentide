@@ -377,6 +377,22 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Session clock — keep the wave/tide section visible for every user,
+          before first-run prompts and return-visit panels. */}
+      <div className="mt-4">
+        <SessionClock
+          now={effectiveNow}
+          states={states}
+          useUTC={useUTC}
+          selected={sessionFilter}
+          onSelect={handleSessionSelect}
+          calendar={calendar.data}
+          calendarLoading={calendar.data === null && !calendar.error}
+          hourlyVolProfile={sessionStats.data?.hourlyVolProfile}
+        />
+      </div>
+
       {/* First run: persona picker once, then the intro story (if not dismissed) */}
       {!presetChosen ? (
         <PresetPicker />
@@ -408,20 +424,6 @@ export default function Dashboard() {
 
       {/* Market pulse: sentiment + macro strip (full read on /markets) */}
       <PulseStrip data={pulse.data} />
-
-      {/* Session clock — with economic calendar markers + countdowns */}
-      <div className="mt-4">
-        <SessionClock
-          now={effectiveNow}
-          states={states}
-          useUTC={useUTC}
-          selected={sessionFilter}
-          onSelect={handleSessionSelect}
-          calendar={calendar.data}
-          calendarLoading={calendar.data === null && !calendar.error}
-          hourlyVolProfile={sessionStats.data?.hourlyVolProfile}
-        />
-      </div>
 
       {/* AI insights: actionable recommendations from live market context.
           Self-hides when no LLM key is configured. Taps scroll to the chart. */}
