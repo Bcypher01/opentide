@@ -457,7 +457,7 @@ export default function TideScrubber({
   );
 
   return (
-    <div className="relative">
+    <div className="relative overflow-hidden">
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}

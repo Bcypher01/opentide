@@ -122,9 +122,9 @@ news + funding + change. Naturally cacheable per asset for a few minutes.
 No code change — your `modelLadder()` already reads env. Suggested:
 ```bash
 GEMINI_MODELS=gemini-3-flash,gemini-2.5-flash,gemini-3.1-flash-lite,gemini-2.5-flash-lite
-OPENROUTER_MODELS=deepseek/deepseek-chat-v3-0324:free,meta-llama/llama-3.3-70b-instruct:free,qwen/qwen-2.5-72b-instruct:free
+OPENROUTER_MODELS=openrouter/free
 ```
-Verify each model id against the provider's current model list before deploying (they churn).
+Verify any pinned model ids against the provider's current model list before deploying (they churn).
 
 ### 5B-2 · Native structured output instead of hand-validated JSON  — **Low-Med**
 You currently request `json` mode then defensively drop malformed items. Gemini supports a

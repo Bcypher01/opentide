@@ -107,7 +107,7 @@ export default function AppShell({
   }, [bellOpen]);
 
   return (
-    <div className="bg-glow flex min-h-screen flex-col">
+    <div className="bg-glow flex min-h-screen flex-col overflow-x-clip">
       {ticker}
 
       {/* Sticky header */}

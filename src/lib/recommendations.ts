@@ -250,10 +250,10 @@ export async function getRecommendations(
       json: true,
       schema: RECS_SCHEMA,
       temperature: 0.4,
-      // Latency budget for the insights card: abandon a stalled model after 8s
-      // (vs the 12s default) and try at most 4 rungs, bounding the worst case
-      // to ~32s instead of ~60s. Typical first-hit success is unaffected.
-      timeoutMs: 8_000,
+      // Latency budget for the insights card: OpenRouter's free router can be
+      // slow on the full market prompt, so give each rung enough room to return
+      // once while still bounding worst-case fallback time.
+      timeoutMs: 20_000,
       maxAttempts: 4,
     });
     const recommendations = parseRecommendations(text, new Set(validAssetIds(ctx)));

@@ -5,13 +5,13 @@
 // attempts and returns the first success:
 //
 //   gemini:2.5-flash → gemini:2.0-flash → gemini:2.5-flash-lite
-//     → openrouter:llama-3.3-70b → openrouter:deepseek-v3 → openrouter:qwen-2.5-72b
+//     → openrouter/free
 //
 // Why a ladder: free quota on Gemini is PER-MODEL, so a 429 on one model is a
 // fresh bucket on the next — and OpenRouter's free models route to different
 // upstream providers, so swapping dodges a throttled one. Error handling is
-// class-aware: a 429 / 5xx / timeout advances to the next model, but an
-// auth/bad-request (400/401/403/404) skips the rest of THAT provider's models
+// class-aware: a 404 / 429 / 5xx / timeout advances to the next model, but an
+// auth/bad-request (400/401/403) skips the rest of THAT provider's models
 // (they'd fail identically) and jumps to the next provider.
 //
 // Reached with plain `fetch` — no SDKs, no new deps. Ladders are env-overridable
@@ -31,15 +31,12 @@ const DEFAULT_GEMINI_MODELS = [
   "gemini-2.0-flash",
   "gemini-2.5-flash-lite",
 ];
-// NOTE: free OpenRouter slugs churn — a model that goes paid returns 404, which
-// is provider-fatal in the ladder below and would skip every model AFTER it. So
-// keep this list current and put the most reliably-free model first. (Removed
-// deepseek-chat-v3-0324:free — it went paid and its 404 was killing the qwen
-// fallback.) Override at runtime with OPENROUTER_MODELS; verify slugs against
-// https://openrouter.ai/models?max_price=0 before deploying.
+// NOTE: specific free OpenRouter slugs churn: a model can go paid and its
+// `:free` variant then returns 404. The generic free router keeps the fallback
+// usable without code changes, while OPENROUTER_MODELS remains available when
+// you want to pin specific slugs.
 const DEFAULT_OPENROUTER_MODELS = [
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "qwen/qwen-2.5-72b-instruct:free",
+  "openrouter/free",
 ];
 
 /** Read a comma-separated ladder from env, honoring the legacy singular var,
@@ -74,8 +71,9 @@ const OPENROUTER_MODELS = modelLadder(
 const TIMEOUT_MS = 12_000;
 
 // Auth / bad-request statuses: every model of the same provider will fail the
-// same way, so skip the rest of that provider's ladder.
-const PROVIDER_FATAL = new Set([400, 401, 403, 404]);
+// same way, so skip the rest of that provider's ladder. 404 is deliberately not
+// fatal because free model slugs disappear independently; the next rung may work.
+const PROVIDER_FATAL = new Set([400, 401, 403]);
 
 export type LlmProvider = "gemini" | "openrouter";
 
@@ -314,8 +312,8 @@ function buildAttempts(messages: LlmMessage[], opts: GenerateOpts): Attempt[] {
 
 /**
  * Generate a completion, walking the model ladder across providers. First
- * non-empty result wins. On a retryable failure (429 / 5xx / timeout) advance
- * to the next model; on an auth/bad-request failure skip the rest of that
+ * non-empty result wins. On a retryable failure (404 / 429 / 5xx / timeout)
+ * advance to the next model; on an auth/bad-request failure skip the rest of that
  * provider's models. Throws LlmUnavailableError only if every attempt fails.
  */
 export async function generate(
