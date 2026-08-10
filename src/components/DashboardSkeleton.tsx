@@ -53,6 +53,22 @@ const NEWS_WIDTHS = ["w-2/3", "w-5/6", "w-1/2", "w-3/4"];
 export default function DashboardSkeleton() {
   return (
     <div>
+      {/* Session clock: first section users should see, even during hydration. */}
+      <div className="mt-4 rounded-2xl border border-border bg-surface p-4 sm:p-5">
+        <div className="space-y-1.5 py-1">
+          <div className="skeleton ml-0 h-7 w-[55%] rounded-md" />
+          <div className="skeleton ml-[28%] h-7 w-[42%] rounded-md" />
+          <div className="skeleton ml-[54%] h-7 w-[40%] rounded-md" />
+          <div className="skeleton h-7 w-full rounded-md" />
+        </div>
+        <div className="skeleton mt-1 h-1.5 w-full rounded" />
+        <div className="mt-3 flex flex-wrap gap-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="skeleton h-[34px] w-44 rounded-full" />
+          ))}
+        </div>
+      </div>
+
       {/* Hero — first-visit intro card (mirrors Hero.tsx). Sized to the real
           card so the new-visitor cold load — the case Lighthouse measures —
           doesn't shift when the skeleton swaps for the real dashboard.
@@ -115,22 +131,6 @@ export default function DashboardSkeleton() {
         <div className="scrollbar-none flex items-center gap-2 overflow-x-auto">
           {[36, 28, 32, 40, 30].map((w, i) => (
             <div key={i} className="skeleton h-[34px] rounded-full" style={{ width: `${w * 4}px` }} />
-          ))}
-        </div>
-      </div>
-
-      {/* Session clock: lanes + liquidity strip + countdown chips */}
-      <div className="mt-4 rounded-2xl border border-border bg-surface p-4 sm:p-5">
-        <div className="space-y-1.5 py-1">
-          <div className="skeleton ml-0 h-7 w-[55%] rounded-md" />
-          <div className="skeleton ml-[28%] h-7 w-[42%] rounded-md" />
-          <div className="skeleton ml-[54%] h-7 w-[40%] rounded-md" />
-          <div className="skeleton h-7 w-full rounded-md" />
-        </div>
-        <div className="skeleton mt-1 h-1.5 w-full rounded" />
-        <div className="mt-3 flex flex-wrap gap-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="skeleton h-[34px] w-44 rounded-full" />
           ))}
         </div>
       </div>
