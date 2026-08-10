@@ -66,11 +66,6 @@ export default function AppShell({
     if (modalAsset) setChartLoaded(true);
   }, [modalAsset]);
 
-  // First visit ever: open the tour once
-  useEffect(() => {
-    if (mounted && !aboutSeen) openAbout();
-  }, [mounted, aboutSeen, openAbout]);
-
   // Global ⌘K / Ctrl+K toggles the command palette; "/" opens it when the
   // user isn't typing into a field.
   useEffect(() => {
