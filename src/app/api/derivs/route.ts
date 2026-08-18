@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { CRYPTO_ASSETS } from "@/lib/assets";
+import { upstreamFetch } from "@/lib/upstreamFetch";
 
 // Crypto derivatives pulse — Binance USDⓈ-M Futures public REST, no key.
 //   · funding rates for every tracked symbol (1 batched call)
@@ -31,7 +32,7 @@ export interface DerivsPayload {
 }
 
 async function fundingRates(): Promise<FundingRow[]> {
-  const res = await fetch(`${FAPI}/fapi/v1/premiumIndex`, {
+  const res = await upstreamFetch(`${FAPI}/fapi/v1/premiumIndex`, {
     next: { revalidate: 300 },
   });
   if (!res.ok) throw new Error(`fapi ${res.status}`);
@@ -55,11 +56,11 @@ async function oiDetail(base: string): Promise<OiRow | null> {
   try {
     const sym = `${base}USDT`;
     const [histRes, lsRes] = await Promise.all([
-      fetch(
+      upstreamFetch(
         `${FAPI}/futures/data/openInterestHist?symbol=${sym}&period=1d&limit=2`,
         { next: { revalidate: 600 } }
       ),
-      fetch(
+      upstreamFetch(
         `${FAPI}/futures/data/globalLongShortAccountRatio?symbol=${sym}&period=1h&limit=1`,
         { next: { revalidate: 600 } }
       ),

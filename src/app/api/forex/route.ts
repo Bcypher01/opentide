@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { upstreamFetch } from "@/lib/upstreamFetch";
 
 // Frankfurter — free, no key, ECB daily reference rates. These update once per
 // business day (~16:00 CET), so we cache aggressively (revalidate 30 min) and
@@ -79,7 +80,7 @@ function currencyStrength(
 
 export async function GET() {
   try {
-    const latestRes = await fetch(
+    const latestRes = await upstreamFetch(
       `https://api.frankfurter.dev/v1/latest?base=USD&symbols=${CCYS}`,
       { next: { revalidate: 1800 } }
     );
@@ -87,7 +88,7 @@ export async function GET() {
     const latest = (await latestRes.json()) as FrankfurterLatest;
 
     const prevDate = prevBusinessDay(latest.date);
-    const prevRes = await fetch(
+    const prevRes = await upstreamFetch(
       `https://api.frankfurter.dev/v1/${prevDate}?base=USD&symbols=${CCYS}`,
       { next: { revalidate: 86400 } }
     );

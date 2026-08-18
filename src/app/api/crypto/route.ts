@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { CRYPTO_ASSETS } from "@/lib/assets";
+import { upstreamFetch } from "@/lib/upstreamFetch";
 
 // Binance public REST — no key needed, generous limits. One batched call for
 // every symbol; Next's fetch cache shares it across ALL users (revalidate 30s).
@@ -24,7 +25,9 @@ export async function GET() {
   try {
     let res: Response | null = null;
     for (const host of HOSTS) {
-      res = await fetch(`https://${host}${query}`, { next: { revalidate: 30 } });
+      res = await upstreamFetch(`https://${host}${query}`, {
+        next: { revalidate: 30 },
+      });
       if (res.ok) break;
     }
     if (!res || !res.ok) throw new Error(`binance ${res?.status}`);
