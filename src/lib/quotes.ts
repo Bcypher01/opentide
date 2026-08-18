@@ -16,6 +16,8 @@
 // Degrades gracefully: any upstream miss just omits that id; never throws.
 // ---------------------------------------------------------------------------
 
+import { upstreamFetch } from "@/lib/upstreamFetch";
+
 const CRYPTO_HOSTS = ["data-api.binance.vision", "api.binance.com"];
 export const MAX_CRYPTO = 30; // batched, so generous
 export const MAX_STOCKS = 12; // Finnhub is one call each — keep a request bounded
@@ -48,7 +50,9 @@ async function quoteCrypto(pairs: string[]): Promise<Record<string, QuoteRow>> {
   try {
     let res: Response | null = null;
     for (const host of CRYPTO_HOSTS) {
-      res = await fetch(`https://${host}${query}`, { next: { revalidate: 30 } });
+      res = await upstreamFetch(`https://${host}${query}`, {
+        next: { revalidate: 30 },
+      });
       if (res.ok) break;
     }
     if (!res || !res.ok) return {};
@@ -82,7 +86,7 @@ async function quoteStocks(symbols: string[]): Promise<Record<string, QuoteRow>>
   await Promise.all(
     symbols.map(async (sym) => {
       try {
-        const res = await fetch(
+        const res = await upstreamFetch(
           `https://finnhub.io/api/v1/quote?symbol=${sym}&token=${key}`,
           { next: { revalidate: 60 } },
         );
