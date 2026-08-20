@@ -85,7 +85,7 @@ export default function NewsFilters({ filters, onChange, onClear, resultCount }:
     <div className="space-y-2.5">
       {/* Row 1 — market tabs + sort + impact */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-1 rounded-lg border border-border bg-surface p-0.5">
+        <div className="flex gap-1 rounded-lg bg-surface p-0.5">
           {MARKET_TABS.map((t) => (
             <button
               key={t.id}
@@ -115,7 +115,7 @@ export default function NewsFilters({ filters, onChange, onClear, resultCount }:
             High impact
           </button>
 
-          <div className="flex gap-1 rounded-lg border border-border bg-surface p-0.5">
+          <div className="flex gap-1 rounded-lg bg-surface p-0.5">
             {(["top", "new"] as const).map((s) => (
               <button
                 key={s}
@@ -142,7 +142,7 @@ export default function NewsFilters({ filters, onChange, onClear, resultCount }:
             value={filters.q}
             onChange={(e) => onChange({ q: e.target.value })}
             placeholder="Search headlines…"
-            className="min-h-[34px] w-full rounded-lg border border-border bg-surface py-1 pl-8 pr-8 text-xs text-text outline-none transition-colors placeholder:text-muted/60 focus:border-accent/50"
+            className="min-h-[34px] w-full rounded-lg bg-surface py-1 pl-8 pr-8 text-xs text-text outline-none transition-colors placeholder:text-dim focus:border-accent/50"
           />
           {filters.q && (
             <button
@@ -162,7 +162,7 @@ export default function NewsFilters({ filters, onChange, onClear, resultCount }:
               setAssetOpen((v) => !v);
               setSourceOpen(false);
             }}
-            className="flex min-h-[34px] items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1 text-xs text-muted transition-colors hover:text-text"
+            className="flex min-h-[34px] items-center gap-1.5 rounded-lg bg-surface px-3 py-1 text-xs text-muted transition-colors hover:text-text"
           >
             Assets
             {filters.assets.length > 0 && (
@@ -175,17 +175,17 @@ export default function NewsFilters({ filters, onChange, onClear, resultCount }:
           {assetOpen && (
             <>
               <div className="fixed inset-0 z-20" onClick={() => setAssetOpen(false)} />
-              <div className="absolute right-0 z-30 mt-1 max-h-80 w-72 overflow-y-auto rounded-xl border border-border bg-surface p-2 shadow-xl">
+              <div className="absolute right-0 z-30 mt-1 max-h-80 w-72 overflow-y-auto rounded-xl bg-surface p-2 shadow-xl">
                 <input
                   autoFocus
                   value={assetQuery}
                   onChange={(e) => setAssetQuery(e.target.value)}
                   placeholder="Filter assets…"
-                  className="mb-2 w-full rounded-lg border border-border bg-surface2 px-2.5 py-1.5 text-xs text-text outline-none placeholder:text-muted/60 focus:border-accent/50"
+                  className="mb-2 w-full rounded-lg bg-surface2 px-2.5 py-1.5 text-xs text-text outline-none placeholder:text-dim focus:border-accent/50"
                 />
                 {grouped.map((g) => (
                   <div key={g.market} className="mb-1.5 last:mb-0">
-                    <p className="px-1 py-1 text-[10px] font-medium uppercase tracking-wider text-muted/70">
+                    <p className="px-1 py-1 text-[10px] font-medium uppercase tracking-wider text-dim">
                       {MARKET_LABEL[g.market]}
                     </p>
                     <div className="flex flex-wrap gap-1">
@@ -220,7 +220,7 @@ export default function NewsFilters({ filters, onChange, onClear, resultCount }:
               setSourceOpen((v) => !v);
               setAssetOpen(false);
             }}
-            className="flex min-h-[34px] items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1 text-xs text-muted transition-colors hover:text-text"
+            className="flex min-h-[34px] items-center gap-1.5 rounded-lg bg-surface px-3 py-1 text-xs text-muted transition-colors hover:text-text"
           >
             Sources
             {filters.sources.length > 0 && (
@@ -233,7 +233,7 @@ export default function NewsFilters({ filters, onChange, onClear, resultCount }:
           {sourceOpen && (
             <>
               <div className="fixed inset-0 z-20" onClick={() => setSourceOpen(false)} />
-              <div className="absolute right-0 z-30 mt-1 w-56 rounded-xl border border-border bg-surface p-2 shadow-xl">
+              <div className="absolute right-0 z-30 mt-1 w-56 rounded-xl bg-surface p-2 shadow-xl">
                 {NEWS_SOURCES.map((s) => {
                   const on = filters.sources.includes(s.name);
                   return (
@@ -244,7 +244,7 @@ export default function NewsFilters({ filters, onChange, onClear, resultCount }:
                     >
                       <span className={on ? "text-accent" : "text-text"}>{s.name}</span>
                       <span className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted/70">{MARKET_LABEL[s.market]}</span>
+                        <span className="text-[10px] text-dim">{MARKET_LABEL[s.market]}</span>
                         <span
                           className={`inline-block h-3.5 w-3.5 rounded-[4px] border ${
                             on ? "border-accent bg-accent/20" : "border-border"
@@ -288,7 +288,7 @@ export default function NewsFilters({ filters, onChange, onClear, resultCount }:
               </button>
             );
           })}
-          <span className="num ml-auto text-[11px] text-muted/70">
+          <span className="num ml-auto text-[11px] text-dim">
             {resultCount} {resultCount === 1 ? "story" : "stories"}
           </span>
         </div>

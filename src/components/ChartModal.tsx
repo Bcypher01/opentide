@@ -69,7 +69,7 @@ export default function ChartModal() {
       />
 
       {/* panel */}
-      <div className="relative flex max-h-full w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
+      <div className="relative flex max-h-full w-full max-w-4xl flex-col overflow-hidden module shadow-2xl">
         {/* header */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-3">
           <div className="min-w-0">
@@ -80,7 +80,7 @@ export default function ChartModal() {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <div className="flex items-center gap-1 rounded-lg border border-border bg-surface2 p-0.5">
+            <div className="flex items-center gap-1 rounded-lg bg-surface2 p-0.5">
               {CHART_INTERVALS.map((iv) => (
                 <button
                   key={iv.value}
@@ -99,7 +99,7 @@ export default function ChartModal() {
                 setSelectedAsset(modalAsset);
                 closeModal();
               }}
-              className="hidden rounded-lg border border-border bg-surface2 px-3 py-1.5 text-xs text-muted transition-colors hover:text-text sm:block"
+              className="hidden rounded-lg bg-surface2 px-3 py-1.5 text-xs text-muted transition-colors hover:text-text sm:block"
             >
               Open on dashboard
             </Link>

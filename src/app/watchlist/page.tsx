@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AiInsights from "@/components/AiInsights";
 import AppShell from "@/components/AppShell";
-import { IconSearch, IconStar } from "@/components/Icons";
+import { IconSearch } from "@/components/Icons";
 import NewsFeed, { type NewsItem } from "@/components/NewsFeed";
 import PriceRow from "@/components/PriceRow";
 import {
@@ -127,19 +127,15 @@ export default function WatchlistPage() {
     <AppShell>
       <div>
         <header className="mt-2">
-          <h1 className="font-display flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
-            <IconStar size={22} className="text-accent" filled />
-            Watchlist
-          </h1>
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">
-            The assets you track, and everything they unlock — live prices, AI ideas tuned to your
-            picks, and a newswire filtered to just your names. Star anything across the app to add
-            it here; it also drives your catch-ups and alerts. Tap a row to chart it.
+          <h1 className="font-display text-[28px] font-semibold tracking-tight">Watchlist</h1>
+          <p className="mt-2 max-w-[58ch] text-sm leading-relaxed text-muted">
+            The assets you track — live prices, AI ideas tuned to your picks, and a newswire
+            filtered to your names. Tap a row to chart it.
           </p>
         </header>
 
         {empty ? (
-          <section className="mt-6 rounded-2xl border border-border bg-surface p-6 text-center">
+          <section className="mt-6 module p-6 text-center">
             <p className="text-sm text-text">Your watchlist is empty.</p>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted">
               Starring an asset personalizes your AI insights, your &ldquo;since you left&rdquo;
@@ -150,14 +146,14 @@ export default function WatchlistPage() {
                 <button
                   key={id}
                   onClick={() => toggleWatch(id)}
-                  className="rounded-full border border-border bg-surface2 px-3.5 py-1.5 text-sm text-text transition-colors hover:border-accent/50 hover:text-accent"
+                  className="rounded-full bg-surface2 px-3.5 py-1.5 text-sm text-text transition-colors hover:text-text"
                 >
                   + {ASSET_BY_ID[id]?.symbol}
                 </button>
               ))}
               <button
                 onClick={openPalette}
-                className="flex items-center gap-1.5 rounded-full border border-border bg-surface2 px-3.5 py-1.5 text-sm text-muted transition-colors hover:border-accent/50 hover:text-accent"
+                className="flex items-center gap-1.5 rounded-full bg-surface2 px-3.5 py-1.5 text-sm text-muted transition-colors hover:text-text"
               >
                 <IconSearch size={13} /> Search all
               </button>
@@ -170,10 +166,10 @@ export default function WatchlistPage() {
 
             <div className="mt-4 grid items-start gap-5 lg:grid-cols-12">
               {/* Tracked assets — the card fits and grows with its content. */}
-              <section className="flex flex-col rounded-2xl border border-border bg-surface p-2 lg:col-span-7">
-                <h2 className="flex items-center gap-2 px-3 pb-1 pt-2 text-xs font-medium uppercase tracking-wider text-muted">
+              <section className="flex flex-col module p-2 lg:col-span-7">
+                <h2 className="section-label flex items-center gap-2 px-4 pb-1.5 pt-3">
                   My markets
-                  <span className="num rounded-full bg-surface2 px-1.5 py-0.5 text-[10px] normal-case text-muted/70">
+                  <span className="num rounded-full bg-surface2 px-1.5 py-0.5 text-[10px] normal-case text-dim">
                     {watched.length}
                   </span>
                 </h2>
@@ -205,14 +201,14 @@ export default function WatchlistPage() {
                         <button
                           key={id}
                           onClick={() => toggleWatch(id)}
-                          className="rounded-full border border-border bg-surface2 px-3 py-1 text-xs text-text transition-colors hover:border-accent/50 hover:text-accent"
+                          className="rounded-full bg-surface2 px-3 py-1 text-xs text-text transition-colors hover:text-text"
                         >
                           + {ASSET_BY_ID[id]?.symbol}
                         </button>
                       ))}
                       <button
                         onClick={openPalette}
-                        className="flex items-center gap-1.5 rounded-full border border-border bg-surface2 px-3 py-1 text-xs text-muted transition-colors hover:border-accent/50 hover:text-accent"
+                        className="flex items-center gap-1.5 rounded-full bg-surface2 px-3 py-1 text-xs text-muted transition-colors hover:text-text"
                       >
                         <IconSearch size={12} /> Search all
                       </button>
@@ -220,7 +216,7 @@ export default function WatchlistPage() {
                   ) : (
                     <button
                       onClick={() => setAddOpen(true)}
-                      className="w-full rounded-lg px-2 py-2 text-sm font-medium text-accent transition-colors hover:bg-surface2"
+                      className="w-full rounded-lg px-2 py-2 text-[13.5px] text-muted underline decoration-muted/40 underline-offset-4 transition-colors hover:text-text"
                     >
                       + Add more
                     </button>
@@ -231,15 +227,15 @@ export default function WatchlistPage() {
               {/* Watchlist-relevant newswire — short, fixed height, scrollable. */}
               <div className="lg:col-span-5">
                 {news.data !== null && relevantNews.length === 0 ? (
-                  <div className="flex h-[440px] flex-col rounded-2xl border border-border bg-surface">
-                    <h2 className="border-b border-border px-4 py-3 text-xs font-medium uppercase tracking-wider text-muted">
+                  <div className="flex h-[440px] flex-col module">
+                    <h2 className="module-title px-4 pb-2.5 pt-4">
                       Newswire
                     </h2>
                     <div className="flex flex-1 flex-col items-center justify-center gap-1 p-6 text-center">
                       <p className="text-sm text-muted">
                         No recent stories mention your watchlist.
                       </p>
-                      <Link href="/news" className="text-sm text-accent hover:underline">
+                      <Link href="/news" className="text-[13.5px] text-muted underline decoration-muted/40 underline-offset-4 transition-colors hover:text-text">
                         Browse all news →
                       </Link>
                     </div>
@@ -258,7 +254,7 @@ export default function WatchlistPage() {
                       footer={
                         <Link
                           href="/news"
-                          className="block border-t border-border px-4 py-2.5 text-center text-xs text-accent transition-colors hover:bg-surface2"
+                          className="block px-4 py-3 text-center text-[12.5px] text-muted underline decoration-muted/40 underline-offset-4 transition-colors hover:text-text"
                         >
                           All news →
                         </Link>

@@ -3,22 +3,22 @@
 import { useEffect, useMemo, useRef } from "react";
 import {
   formatCountdown,
-  getAllSessionStates,
+  type SessionId,
   type SessionState,
 } from "@/lib/sessions";
 import { useStore } from "@/lib/store";
 import { getTideReading } from "@/lib/tide";
-import { IconCandles, IconClock, IconZap } from "./Icons";
 
 interface Props {
-  onDismiss: () => void;
+  /** Live clock — the hero is permanent chrome now, so it re-reads every tick. */
+  now: Date;
+  states: SessionState[];
+  /** Currently filtered session, or null. The session row doubles as the filter. */
+  selected: SessionId | null;
+  onSelect: (id: SessionId | null) => void;
+  /** Normalized UTC hour-of-day volatility profile from /api/sessionstats. */
+  volProfile?: number[];
 }
-
-const FEATURES = [
-  { icon: IconClock, label: "Live session clock" },
-  { icon: IconZap, label: "Asset-tagged newswire" },
-  { icon: IconCandles, label: "One-tap charts" },
-];
 
 // ---------------------------------------------------------------------------
 // The sea — canvas simulation. One color family (accent teal), depth via
@@ -95,6 +95,11 @@ const SWELL_BREATH = 0.14; // slow per-layer amplitude breathing
 const PEAK_CHOP = 0.24; // extra harmonic bite as liquidity rises
 const PEAK_FLOW = 0.35; // baseline speed increase at peak liquidity
 
+// Water level, in the sim's 150px reference frame. Higher = the waterline sits
+// lower in the box, leaving air above it. Tuned against the shorter hero band
+// so the crests read as waves without opening a hole under the copy.
+const BASE_LEVEL = 50;
+
 function headlineFor(open: SessionState[], next: SessionState | null, now: Date) {
   const names = open.map((s) => s.def.name);
   const nextIn = next?.opensAt ? formatCountdown(next.opensAt - now.getTime()) : null;
@@ -120,7 +125,7 @@ function headlineFor(open: SessionState[], next: SessionState | null, now: Date)
   };
 }
 
-export default function Hero({ onDismiss }: Props) {
+export default function Hero({ now, states, selected, onSelect, volProfile }: Props) {
   const openAbout = useStore((s) => s.openAbout);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -129,31 +134,48 @@ export default function Hero({ onDismiss }: Props) {
   const pointer = useRef({ x: 0, targetX: 0, energy: 0, hover: false });
   const rectRef = useRef<DOMRect | null>(null);
 
-  // Snapshot at mount: the hero shows a handful of times to a new user, so a
-  // static "now" is honest enough and costs zero subscriptions.
+  // Live, not a mount-time snapshot: this block is the permanent top of the
+  // dashboard now, so the headline, the countdowns and the water level all have
+  // to keep up with the clock.
   const scene = useMemo(() => {
-    const now = new Date();
-    const states = getAllSessionStates(now);
     const open = states.filter((s) => s.isOpen);
     const next =
       states
         .filter((s) => !s.isOpen && s.opensAt)
         .sort((a, b) => (a.opensAt ?? 0) - (b.opensAt ?? 0))[0] ?? null;
-    const tide = getTideReading(now);
+    const tide = getTideReading(now, volProfile);
     const activity = tide.height; // 0..1, crypto floor included
     return {
       ...headlineFor(open, next, now),
       activity,
       overlap: tide.overlap,
       tideWord: activity >= 0.6 ? "High tide" : activity >= 0.3 ? "Mid tide" : "Low tide",
-      tideDetail:
-        open.length > 0
-          ? open.map((s) => s.def.name).join(" + ")
-          : next?.opensAt
-            ? `next: ${next.def.name} in ${formatCountdown(next.opensAt - now.getTime())}`
-            : "crypto only",
+      dominantName: open[0]?.def.name ?? null,
+      // One row, every session, in their own lane colours — and the session
+      // filter, so the row that tells you what is awake also narrows the board.
+      sessions: states.map((s) => ({
+        id: s.def.id,
+        name: s.def.name,
+        color: s.def.color,
+        isOpen: s.isOpen,
+        detail: s.isOpen
+          ? s.closesAt
+            ? `${formatCountdown(s.closesAt - now.getTime())} left`
+            : null
+          : s.opensAt
+            ? `in ${formatCountdown(s.opensAt - now.getTime())}`
+            : null,
+      })),
     };
-  }, []);
+  }, [now, states, volProfile]);
+
+  // The canvas reads activity through a ref so the sim is set up exactly once.
+  // Re-running the effect on every clock tick would restart the wave animation
+  // once a second; instead the water level eases as the reading drifts.
+  const actRef = useRef(scene.activity);
+  const overlapRef = useRef(scene.overlap);
+  actRef.current = scene.activity;
+  overlapRef.current = scene.overlap;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -164,7 +186,7 @@ export default function Hero({ onDismiss }: Props) {
     const accent =
       getComputedStyle(document.documentElement)
         .getPropertyValue("--color-accent")
-        .trim() || "#00d4aa";
+        .trim() || "#3fd0a0";
 
     let w = 0;
     let h = 0;
@@ -181,14 +203,13 @@ export default function Hero({ onDismiss }: Props) {
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
 
-    // Water level + base amplitude from the mount-time activity reading.
-    const act = scene.activity;
-    const peak = Math.min(1, Math.pow(act, 1.25) * (scene.overlap ? 1.12 : 1));
-    const chop = PEAK_CHOP * peak;
-
     const drawFrame = (flowT: number) => {
+      // Read live: the tide reading drifts as sessions open and close.
+      const act = actRef.current;
+      const peak = Math.min(1, Math.pow(act, 1.25) * (overlapRef.current ? 1.12 : 1));
+      const chop = PEAK_CHOP * peak;
       const p = pointer.current;
-      const level = (46 + (1 - act) * 74) * (h / 150);
+      const level = (BASE_LEVEL + (1 - act) * 74) * (h / 150);
       const baseAmp = (4 + act * 14) * (h / 150);
       const rise = CHURN_RISE * (h / 150);
       ctx.clearRect(0, 0, w, h);
@@ -273,6 +294,7 @@ export default function Hero({ onDismiss }: Props) {
       last = tms;
       if (!visible || w === 0) return;
       const p = pointer.current;
+      const peak = Math.min(1, Math.pow(actRef.current, 1.25) * (overlapRef.current ? 1.12 : 1));
       // Ease the churn field toward the pointer; decay it after leave. Slow
       // constants on purpose — the water should follow the cursor like a
       // current, not snap to it.
@@ -289,50 +311,98 @@ export default function Hero({ onDismiss }: Props) {
       ro.disconnect();
       io.disconnect();
     };
-  }, [scene.activity, scene.overlap]);
+  }, []);
+
+  const tidePct = Math.round(scene.activity * 100);
 
   return (
     <section
-      className="relative mt-4 overflow-hidden rounded-2xl border border-border bg-bg"
-      aria-label="What is Opentide"
+      // Full bleed to the VIEWPORT, not just to the content column: the hero
+      // breaks out of the 1700px shell so the water reaches both screen edges
+      // on any display. `mx-[calc(50%-50vw)]` re-centres a 100vw box inside a
+      // centred parent; AppShell's overflow-x-clip absorbs the scrollbar.
+      // Everything below the hero returns to the normal page inset.
+      className="hero-block relative mx-[calc(50%-50vw)] mt-2 w-[100vw] overflow-hidden"
+      aria-label="Market session clock"
     >
-      <button
-        onClick={onDismiss}
-        aria-label="Dismiss intro"
-        className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface2 hover:text-text"
-      >
-        ✕
-      </button>
+      {/* Tide gauge — scoped to the hero block, so no gutter is reserved
+          anywhere else on the page. Fills to the current tide height. */}
+      <div className="tide-gauge" aria-hidden="true">
+        <span className="tide-gauge-label">
+          {scene.tideWord} · {(scene.activity).toFixed(2)}
+        </span>
+        <div className="tide-gauge-fill" style={{ height: `${Math.max(6, tidePct)}%` }} />
+      </div>
 
-      {/* Sky: live generated headline */}
-      <div className="relative z-10 px-5 pt-7 sm:px-8 sm:pt-9">
-        <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-accent">
-          Every market · Every session · Free
+      <div className="relative z-10 pr-5 pt-7 sm:pt-8 lg:pr-10">
+        <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-accent">
+          {scene.dominantName ? `${scene.dominantName} · ` : ""}
+          {scene.tideWord}
         </p>
-        <h2 className="font-display mt-2.5 max-w-3xl text-[26px] font-semibold leading-[1.12] tracking-tight sm:text-4xl">
+        <h2 className="font-display mt-3 max-w-[22ch] text-[28px] font-semibold leading-[1.1] tracking-tight sm:text-[34px]">
           {scene.title}
         </h2>
-        <p className="mt-2 max-w-2xl text-sm text-muted sm:text-[15px]">{scene.sub}</p>
+        <p className="mt-2.5 max-w-[56ch] text-sm leading-relaxed text-muted">{scene.sub}</p>
 
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button
-            onClick={onDismiss}
-            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-bg transition-opacity hover:opacity-90"
-          >
-            Show me the markets →
-          </button>
+        {/* Session row — each session in its own lane colour when awake, and
+            the board filter: tapping one narrows the markets list to it. */}
+        <div className="mt-5 flex flex-wrap gap-x-2 gap-y-1.5" role="group" aria-label="Filter by session">
+          {scene.sessions.map((s) => {
+            const isSel = selected === s.id;
+            return (
+              <button
+                key={s.id}
+                onClick={() => onSelect(isSel ? null : s.id)}
+                aria-pressed={isSel}
+                title={isSel ? `Clear the ${s.name} filter` : `Show only ${s.name} assets`}
+                className={`-ml-2 flex min-h-[30px] items-center gap-2 rounded-full px-2.5 text-[11px] transition-colors first:ml-0 ${
+                  isSel
+                    ? "bg-surface2 text-text"
+                    : s.isOpen
+                      ? "text-text hover:bg-surface2"
+                      : "text-dim hover:bg-surface2 hover:text-muted"
+                }`}
+              >
+                <span
+                  className={`h-[7px] w-[7px] shrink-0 rounded-full ${s.isOpen ? "pulse-dot" : ""}`}
+                  style={
+                    s.isOpen
+                      ? {
+                          backgroundColor: s.color,
+                          boxShadow: `0 0 0 3px color-mix(in srgb, ${s.color} 18%, transparent)`,
+                        }
+                      : { backgroundColor: "#2b3438" }
+                  }
+                />
+                {s.name}
+                {s.detail && <span className={isSel ? "text-muted" : "text-dim"}>· {s.detail}</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
           <button
             onClick={openAbout}
-            className="rounded-lg border border-border bg-surface2 px-5 py-2.5 text-sm text-muted transition-colors hover:border-accent/40 hover:text-text"
+            className="text-[13px] text-muted underline decoration-muted/40 underline-offset-4 transition-colors hover:text-text"
           >
             Take the 60-second tour
           </button>
+          {selected && (
+            <button
+              onClick={() => onSelect(null)}
+              className="text-[13px] text-dim underline decoration-dim/40 underline-offset-4 transition-colors hover:text-text"
+            >
+              Clear session filter
+            </button>
+          )}
         </div>
       </div>
 
-      {/* The sea */}
+      {/* The sea — bleeds past the gauge on the left and the page edge on the
+          right, so the water reads as the page's own surface. */}
       <div
-        className="relative mt-6 h-[120px] cursor-crosshair sm:h-[150px]"
+        className="relative ml-[calc(var(--hero-gutter)*-1)] mt-4 h-[104px] cursor-crosshair sm:h-[124px]"
         onPointerMove={(e) => {
           const rect =
             rectRef.current ?? (rectRef.current = e.currentTarget.getBoundingClientRect());
@@ -345,22 +415,6 @@ export default function Hero({ onDismiss }: Props) {
         }}
       >
         <canvas ref={canvasRef} aria-hidden="true" className="absolute inset-0 h-full w-full" />
-
-        {/* Floating on the water: features left, tide gauge right */}
-        <div className="pointer-events-none absolute bottom-3 left-3 hidden items-center gap-2 sm:flex">
-          {FEATURES.map((f) => (
-            <span
-              key={f.label}
-              className="flex items-center gap-1.5 rounded-full border border-border bg-bg/75 px-3 py-1 text-[11px] text-muted"
-            >
-              <f.icon size={12} className="text-accent" />
-              {f.label}
-            </span>
-          ))}
-        </div>
-        <div className="num pointer-events-none absolute bottom-3 right-3 rounded-full border border-accent/30 bg-bg/80 px-2.5 py-1 text-[10px] font-medium text-accent">
-          {scene.tideWord} · {scene.tideDetail}
-        </div>
       </div>
     </section>
   );

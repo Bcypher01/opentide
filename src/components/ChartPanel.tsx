@@ -49,7 +49,7 @@ export default function ChartPanel({
   return (
     <section
       id="chart"
-      className="overflow-hidden rounded-2xl border border-border bg-surface"
+      className="module-raised"
       style={{
         backgroundImage: isPreview
           ? `linear-gradient(180deg, ${tint}18, transparent 34%)`
@@ -58,11 +58,11 @@ export default function ChartPanel({
       aria-label={`Chart for ${displaySymbol}`}
     >
       {/* Chart header */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 pb-3 pt-4">
         <div className="min-w-0">
           <div className="flex items-baseline gap-2">
             <h2 className="font-display text-base font-semibold">{displaySymbol}</h2>
-            <span className="truncate text-xs text-muted">{displayName}</span>
+            <span className="truncate text-xs text-dim">{displayName}</span>
           </div>
           <div className="mt-0.5 flex items-baseline gap-2">
             {price !== null && (
@@ -72,25 +72,24 @@ export default function ChartPanel({
             )}
             {changePct !== null && (
               <span className={`num text-sm ${up ? "text-bull" : "text-bear"} ${isPreview ? "opacity-70" : ""}`}>
-                {up ? "▲ " : "▼ "}
                 {formatChangePct(changePct)}
               </span>
             )}
             {isPreview && (
-              <span className="rounded-full border border-border bg-surface2 px-1.5 py-0.5 text-[10px] text-muted">
+              <span className="rounded-full bg-surface2 px-1.5 py-0.5 text-[10px] text-dim">
                 live locked
               </span>
             )}
           </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-1 rounded-lg border border-border bg-surface2 p-0.5">
+        <div className="ml-auto flex items-center gap-1 rounded-lg bg-surface2 p-0.5">
           {CHART_INTERVALS.map((iv) => (
             <button
               key={iv.value}
               onClick={() => setInterval(iv.value)}
               className={`num min-h-[30px] rounded-md px-2.5 py-1 text-xs transition-colors ${
-                interval === iv.value ? "bg-text text-bg" : "text-muted hover:text-text"
+                interval === iv.value ? "bg-text text-bg" : "text-dim hover:text-text"
               }`}
             >
               {iv.label}
@@ -101,8 +100,8 @@ export default function ChartPanel({
 
       {/* In the news — chart suggestions driven by the news engine */}
       {sortedTrending.length > 0 && (
-        <div className="flex items-center gap-2 overflow-x-auto border-b border-border px-4 py-2">
-          <span className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-muted">
+        <div className="scrollbar-none flex items-center gap-2 overflow-x-auto px-4 pb-3">
+          <span className="section-label shrink-0">
             {isPreview ? "Likely in focus" : "In the news"}
           </span>
           {sortedTrending.map(({ id, count }) => {
@@ -115,16 +114,16 @@ export default function ChartPanel({
                 key={id}
                 onClick={() => onSelect(id)}
                 title={`${count} recent stories mention ${a.name} — view chart`}
-                className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
+                className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-colors ${
                   active
-                    ? "border-accent/60 bg-accent/10 text-accent"
+                    ? "bg-accent/10 text-accent"
                     : sessionFit && isPreview
-                      ? "border-accent/40 bg-accent/10 text-text"
-                      : "border-border bg-surface2 text-muted hover:text-text"
+                      ? "bg-accent/10 text-text"
+                      : "bg-surface2 text-dim hover:text-text"
                 }`}
               >
                 {a.symbol}
-                <span className="num rounded-full bg-bg px-1.5 text-[10px] text-muted">{count}</span>
+                <span className="num rounded-full bg-bg px-1.5 text-[10px] text-dim">{count}</span>
               </button>
             );
           })}

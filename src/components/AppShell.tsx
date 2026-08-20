@@ -106,8 +106,8 @@ export default function AppShell({
       {ticker}
 
       {/* Sticky header */}
-      <header className="sticky top-0 z-40 border-b border-border bg-bg/75 backdrop-blur-md">
-        <div className="mx-auto flex max-w-[1700px] items-center gap-1 px-3 py-2.5 sm:gap-2 sm:px-4 lg:px-6">
+      <header className="sticky top-0 z-40 bg-bg/85 backdrop-blur-md">
+        <div className="flex w-full items-center gap-1.5 px-5 py-3.5 sm:gap-2 lg:px-10">
           {/* Logo */}
           <Link href="/" className="flex shrink-0 items-center gap-2 sm:gap-2.5" aria-label="Opentide home">
             <Logo size={28} />
@@ -117,7 +117,7 @@ export default function AppShell({
           {/* Nav — horizontally scrollable on very small screens so it never
               pushes the controls off-edge */}
           <nav
-            className="scrollbar-none ml-1 flex min-w-0 items-center gap-0.5 overflow-x-auto sm:ml-3 sm:gap-1"
+            className="scrollbar-none ml-2 flex min-w-0 items-center gap-4 overflow-x-auto sm:ml-7 sm:gap-6"
             aria-label="Main navigation"
           >
             {NAV.map((n) => {
@@ -126,10 +126,10 @@ export default function AppShell({
                 <Link
                   key={n.href}
                   href={n.href}
-                  className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[13px] transition-colors sm:px-3 sm:text-sm ${
+                  className={`shrink-0 py-0.5 text-[13.5px] transition-colors ${
                     active
-                      ? "bg-surface2 font-medium text-text"
-                      : "text-muted hover:text-text"
+                      ? "text-text shadow-[inset_0_-1px_0_var(--color-text)]"
+                      : "text-dim hover:text-text"
                   }`}
                 >
                   {n.label}
@@ -144,7 +144,7 @@ export default function AppShell({
           {mounted && (
             <>
               {/* Session greeting — large screens only */}
-              <p className="hidden min-w-0 truncate text-sm text-muted xl:block xl:max-w-xs">
+              <p className="hidden min-w-0 truncate text-[13px] text-dim xl:block xl:max-w-xs">
                 {sessionGreeting(now)}
               </p>
 
@@ -156,7 +156,7 @@ export default function AppShell({
                 onClick={openPalette}
                 title="Search (⌘K)"
                 aria-label="Search"
-                className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-border bg-surface px-2 text-muted transition-colors hover:text-text sm:px-2.5 sm:pr-2"
+                className="flex h-9 shrink-0 items-center gap-2 rounded-lg bg-surface px-2.5 text-dim transition-colors hover:text-text"
               >
                 <svg
                   width={16}
@@ -170,7 +170,7 @@ export default function AppShell({
                   <circle cx="11" cy="11" r="7" />
                   <path d="m21 21-4.3-4.3" />
                 </svg>
-                <kbd className="num hidden rounded border border-border bg-surface2 px-1.5 py-0.5 text-[10px] sm:inline">
+                <kbd className="num hidden rounded bg-surface2 px-1.5 py-0.5 text-[10px] sm:inline">
                   ⌘K
                 </kbd>
               </button>
@@ -182,10 +182,10 @@ export default function AppShell({
                   title="Notification settings"
                   aria-label="Notification settings"
                   aria-expanded={bellOpen}
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
                     notifPrefs.enabled
-                      ? "border-accent/50 bg-accent/10 text-accent"
-                      : "border-border bg-surface text-muted hover:text-text"
+                      ? "bg-accent/10 text-accent"
+                      : "bg-surface text-dim hover:text-text"
                   }`}
                 >
                   <IconBell size={16} />
@@ -197,7 +197,7 @@ export default function AppShell({
                   save width and reduce the per-second repaint */}
               <button
                 onClick={toggleUTC}
-                className="num shrink-0 rounded-lg border border-border bg-surface px-2 py-1.5 text-[13px] text-muted transition-colors hover:text-text sm:px-3 sm:text-sm"
+                className="num shrink-0 rounded-lg bg-surface px-2.5 py-1.5 text-[12.5px] text-dim transition-colors hover:text-text"
                 title="Toggle between local time and UTC"
               >
                 <span className="sm:hidden">
@@ -224,7 +224,7 @@ export default function AppShell({
                 onClick={openAbout}
                 title="What is Opentide? Take the 60-second tour"
                 aria-label="About Opentide"
-                className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:text-text"
+                className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface text-dim transition-colors hover:text-text"
               >
                 <IconHelp size={16} />
                 {!aboutSeen && (
@@ -239,7 +239,7 @@ export default function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1700px] flex-1 px-4 pb-10 pt-4 lg:px-6">
+      <main className="w-full flex-1 px-5 pb-12 pt-2 lg:px-10">
         {children}
       </main>
 
@@ -248,7 +248,7 @@ export default function AppShell({
       {mounted && paletteLoaded && <CommandPalette />}
       {mounted && <Assistant />}
 
-      <footer className="mx-auto w-full max-w-[1700px] px-4 pb-8 text-center text-xs text-muted/60 lg:px-6">
+      <footer className="w-full px-5 pb-10 text-center text-xs text-dim lg:px-10">
         <p>
           Data: Binance · Frankfurter (ECB) · Finnhub · CoinGecko · Yahoo · CoinDesk · Cointelegraph
           · CNBC · MarketWatch · FXStreet. Charts by TradingView. Not investment advice.
@@ -266,7 +266,7 @@ export default function AppShell({
             href="https://olumideb.vercel.app/"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-muted/80 underline-offset-2 transition-colors hover:text-text hover:underline"
+            className="font-medium text-muted underline-offset-2 transition-colors hover:text-text hover:underline"
           >
             Olumide
           </a>{" "}

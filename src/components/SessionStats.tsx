@@ -35,7 +35,7 @@ function Spotlight({ stat, inProgress }: { stat: SessionStat; inProgress: boolea
   const todayWidth = ratio !== null ? Math.min(ratio, 2) * 50 : 0;
 
   return (
-    <div className="rounded-xl border border-border bg-surface2 p-3.5">
+    <div className="rounded-xl bg-surface2 p-3.5">
       <div className="flex items-baseline justify-between">
         <span className="text-xs font-medium text-text">{stat.name} session</span>
         {hasNormal ? (
@@ -77,7 +77,7 @@ function Spotlight({ stat, inProgress }: { stat: SessionStat; inProgress: boolea
             {/* 100%-of-normal marker */}
             <span className="absolute left-1/2 top-0 h-full w-px bg-text/50" />
           </div>
-          <div className="mt-1 flex justify-between text-[10px] text-muted/70">
+          <div className="mt-1 flex justify-between text-[10px] text-dim">
             <span>0</span>
             <span>normal</span>
             <span>2× normal</span>
@@ -100,8 +100,8 @@ function SessionStatsSkeleton() {
         <div className="skeleton h-4 w-24 rounded" />
         <div className="skeleton h-3 w-48 rounded" />
       </div>
-      <div className="rounded-2xl border border-border bg-surface p-3">
-        <div className="rounded-xl border border-border bg-surface2 p-3.5">
+      <div className="module p-3">
+        <div className="rounded-xl bg-surface2 p-3.5">
           <div className="flex justify-between">
             <div className="skeleton h-3.5 w-28 rounded" />
             <div className="skeleton h-3 w-20 rounded" />
@@ -111,7 +111,7 @@ function SessionStatsSkeleton() {
         </div>
         <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-lg border border-border bg-surface2/50 p-2.5">
+            <div key={i} className="rounded-lg bg-surface2/50 p-2.5">
               <div className="skeleton h-3 w-14 rounded" />
               <div className="skeleton mt-1.5 h-3 w-16 rounded" />
               <div className="skeleton mt-1.5 h-3 w-12 rounded" />
@@ -158,8 +158,8 @@ export default function SessionStats({ data, states, onSelect }: Props) {
   return (
     <section key="sessionstats-loaded" className="fade-in mt-5" aria-label="Session statistics">
       <div className="mb-2 flex flex-wrap items-baseline gap-3">
-        <h2 className="font-display text-base font-semibold tracking-tight">Session stats</h2>
-        <span className="text-xs text-muted">
+        <h2 className="section-label">Session stats</h2>
+        <span className="text-xs text-dim">
           how {active.symbol} usually moves per session · {data.lookbackDays}d
         </span>
         <nav className="ml-auto flex gap-1.5" aria-label="Asset">
@@ -170,7 +170,7 @@ export default function SessionStats({ data, states, onSelect }: Props) {
               className={`rounded-full px-2.5 py-1 text-[11px] transition-colors ${
                 active.assetId === a.assetId
                   ? "bg-text font-medium text-bg"
-                  : "border border-border bg-surface2 text-muted hover:text-text"
+                  : "bg-surface2 text-muted hover:text-text"
               }`}
             >
               {a.symbol}
@@ -179,7 +179,7 @@ export default function SessionStats({ data, states, onSelect }: Props) {
         </nav>
       </div>
 
-      <div className="rounded-2xl border border-border bg-surface p-3">
+      <div className="module p-3">
         <Spotlight stat={focusStat} inProgress={inProgress} />
 
         {/* All four sessions at a glance */}
@@ -208,7 +208,7 @@ export default function SessionStats({ data, states, onSelect }: Props) {
                       )}
                     </>
                   ) : (
-                    <span className="text-muted/60">no session today</span>
+                    <span className="text-dim">no session today</span>
                   )}
                 </div>
               </div>
@@ -217,13 +217,13 @@ export default function SessionStats({ data, states, onSelect }: Props) {
         </div>
 
         <div className="mt-2.5 flex items-center justify-between">
-          <p className="text-[10px] leading-relaxed text-muted/70">
+          <p className="text-[10px] leading-relaxed text-dim">
             Range = session high-low as a % of the session-open price. &ldquo;Of normal&rdquo;
             compares today to the {data.lookbackDays}-day average. Binance · informational only.
           </p>
           <button
             onClick={() => onSelect(active.assetId)}
-            className="ml-3 shrink-0 rounded-full border border-border px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-text"
+            className="ml-3 shrink-0 rounded-full border border-white/[0.055] px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-text"
           >
             Chart {active.symbol}
           </button>

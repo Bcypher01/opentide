@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 import type { CalendarPayload } from "@/app/api/calendar/route";
-import {
-  SessionState,
-  formatCountdown,
-  type SessionId,
-} from "@/lib/sessions";
+import { SessionState, type SessionId } from "@/lib/sessions";
 import EconCalendar from "./EconCalendar";
 import TideScrubber from "./TideScrubber";
 
@@ -38,15 +34,13 @@ export default function SessionClock({
 
   return (
     <section
-      aria-label="Market session clock"
-      className="rounded-2xl border border-border bg-surface p-4 sm:p-5"
+      aria-label="Liquidity tide"
+      className="module-raised p-4 sm:p-5"
     >
-      <div className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted">
-        <span>Liquidity tide — drag to time-travel</span>
+      <div className="mb-2 flex items-center gap-3 text-[11px] text-dim">
+        <span>drag to time-travel</span>
         <span className="h-px flex-1 bg-border" />
-        <span className="hidden normal-case tracking-normal sm:inline">
-          wave = typical activity, swells at overlaps
-        </span>
+        <span className="hidden sm:inline">wave = typical activity, swells at overlaps</span>
       </div>
 
       {/* Timeline */}
@@ -61,41 +55,6 @@ export default function SessionClock({
           showAllEvents={showAllEvents}
           volProfile={hourlyVolProfile}
         />
-      </div>
-
-      {/* Countdown chips */}
-      <div className="mt-3 flex flex-wrap gap-2">
-        {states.map((s) => {
-          const isSel = selected === s.def.id;
-          let label: string;
-          if (s.isOpen && s.closesAt) {
-            label = `closes in ${formatCountdown(s.closesAt - t)}`;
-          } else if (s.opensAt) {
-            label = `opens in ${formatCountdown(s.opensAt - t)}`;
-          } else {
-            label = "—";
-          }
-          return (
-            <button
-              key={s.def.id}
-              onClick={() => onSelect(isSel ? null : s.def.id)}
-              className={`flex min-h-[34px] items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors duration-200 ${
-                isSel
-                  ? "border-accent/60 bg-accent/10 text-text"
-                  : "border-border bg-surface2 text-muted hover:text-text"
-              }`}
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${s.isOpen ? "pulse-dot" : ""}`}
-                style={{ backgroundColor: s.isOpen ? s.def.color : "#3a3f4a" }}
-              />
-              <span className="font-medium" style={{ color: s.isOpen ? s.def.color : undefined }}>
-                {s.def.name}
-              </span>
-              <span className="num">{label}</span>
-            </button>
-          );
-        })}
       </div>
 
       {/* Economic calendar: countdown chips, explainers, full list */}

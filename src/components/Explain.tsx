@@ -81,7 +81,7 @@ export default function Explain({ target, label = "Explain", className = "" }: P
           className="fade-in mt-2 rounded-xl border border-accent/30 bg-surface p-3"
         >
           <div className="flex items-start justify-between gap-3">
-            <span className="text-[10px] font-medium uppercase tracking-wider text-muted/70">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-dim">
               In plain English
             </span>
             <button
@@ -118,7 +118,7 @@ export default function Explain({ target, label = "Explain", className = "" }: P
                   {result.risk}
                 </p>
               )}
-              <p className="mt-2 text-[10px] uppercase tracking-wider text-muted/50">
+              <p className="mt-2 text-[10px] uppercase tracking-wider text-dim/70">
                 AI-generated · descriptive, not financial advice
               </p>
             </div>

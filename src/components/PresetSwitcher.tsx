@@ -93,7 +93,7 @@ export default function PresetSwitcher() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-xl border border-border bg-surface p-1 shadow-2xl"
+          className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-xl bg-surface p-1 shadow-2xl"
         >
           {pending ? (
             <div className="p-3">
@@ -107,7 +107,7 @@ export default function PresetSwitcher() {
               <div className="mt-3 flex gap-2">
                 <button
                   onClick={() => resolvePending(false)}
-                  className="flex-1 rounded-lg border border-border bg-surface2 px-3 py-2 text-xs font-medium text-text transition-colors hover:border-accent/40"
+                  className="flex-1 rounded-lg bg-surface2 px-3 py-2 text-xs font-medium text-text transition-colors hover:bg-surface2"
                 >
                   Keep mine
                 </button>
@@ -127,7 +127,7 @@ export default function PresetSwitcher() {
             </div>
           ) : (
             <>
-              <p className="px-3 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wider text-muted/70">
+              <p className="px-3 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wider text-dim">
                 Trader profile
               </p>
               {PRESETS.map((p) => {

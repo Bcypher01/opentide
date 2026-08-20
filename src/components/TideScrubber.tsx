@@ -547,7 +547,7 @@ export default function TideScrubber({
         }}
       >
         <div
-          className="w-max max-w-[220px] rounded-lg border border-border bg-bg/95 px-3 py-2 text-xs"
+          className="w-max max-w-[220px] rounded-lg bg-surface2 px-3 py-2 text-xs shadow-lg"
           style={{
             transform: activeFrac > 0.82 ? "translateX(calc(-100% - 8px))" : "translateX(8px)",
           }}
@@ -561,13 +561,13 @@ export default function TideScrubber({
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg border border-border bg-surface2 p-3">
+        <div className="rounded-lg bg-surface2 p-3">
           <div className="text-[10px] font-medium uppercase tracking-wider text-muted">
             Sessions open
           </div>
           <div className="mt-1 truncate text-sm font-semibold text-text">{openNames}</div>
         </div>
-        <div className="rounded-lg border border-border bg-surface2 p-3">
+        <div className="rounded-lg bg-surface2 p-3">
           <div className="text-[10px] font-medium uppercase tracking-wider text-muted">
             Expected activity
           </div>
@@ -576,13 +576,13 @@ export default function TideScrubber({
             <span className="num ml-1 text-muted">({Math.round(smoothActivity * 100)}%)</span>
           </div>
         </div>
-        <div className="rounded-lg border border-border bg-surface2 p-3">
+        <div className="rounded-lg bg-surface2 p-3">
           <div className="text-[10px] font-medium uppercase tracking-wider text-muted">
             Next on the axis
           </div>
           <div className="mt-1 truncate text-sm font-semibold text-text">{nextLabel}</div>
         </div>
-        <div className="rounded-lg border border-border bg-surface2 p-3">
+        <div className="rounded-lg bg-surface2 p-3">
           <div className="text-[10px] font-medium uppercase tracking-wider text-muted">
             Typical range (hour)
           </div>

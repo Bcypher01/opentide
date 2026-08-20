@@ -48,7 +48,7 @@ import PresetPicker from "./PresetPicker";
 // ChartPanel keeps a height-matched placeholder so deferring it adds no CLS.
 const ChartPanel = dynamic(() => import("./ChartPanel"), {
   loading: () => (
-    <div className="rounded-2xl border border-border bg-surface lg:h-[604px]" />
+    <div className="module-raised lg:h-[604px]" />
   ),
 });
 const DigestView = dynamic(() => import("./DigestView"), { ssr: false });
@@ -137,8 +137,6 @@ export default function Dashboard() {
     sessionFilter,
     setSessionFilter,
     selectedAsset,
-    heroDismissed,
-    dismissHero,
     presetChosen,
     panelPrefs,
     useUTC,
@@ -319,6 +317,27 @@ export default function Dashboard() {
 
   const { diff: awayDiff, dismiss: dismissAway } = useAwayDiff(quoteOf, watchlist);
 
+  // Shelf: which of the four secondary panels is showing. Null = "not chosen
+  // yet", which resolves to the first tab so the preset still decides what a
+  // user sees first.
+  const [shelfPanel, setShelfPanel] = useState<string | null>(null);
+  const shelfTabs = useMemo(() => {
+    const labels: Record<string, string> = {
+      movers: "Movers",
+      derivs: "Derivatives",
+      tide: "Liquidity tide",
+      pulse: "Market pulse",
+      insights: "AI insights",
+    };
+    const ordered = resolvePanelLayout(["movers", "derivs"] as PanelId[], panelPrefs);
+    return [...ordered, "tide", "pulse", "insights"].map((id) => ({ id, label: labels[id] ?? id }));
+  }, [panelPrefs]);
+  const activeShelfPanel =
+    shelfPanel && shelfTabs.some((t) => t.id === shelfPanel)
+      ? shelfPanel
+      : (shelfTabs[0]?.id ?? "movers");
+
+
   if (!mounted) {
     return (
       <AppShell>
@@ -358,7 +377,7 @@ export default function Dashboard() {
   return (
     <AppShell ticker={<Ticker quoteOf={quoteOf} onSelect={openChart} isPreview={isPreview} />}>
       {isPreview && (
-        <div className="sticky top-[58px] z-30 mb-4 rounded-xl border border-accent/35 bg-bg/90 px-3 py-2 text-sm shadow-lg backdrop-blur">
+        <div className="sticky top-[58px] z-30 mb-4 rounded-xl bg-surface2 px-3 py-2 text-sm shadow-lg backdrop-blur">
           <div className="flex flex-wrap items-center gap-2">
             <span className="num rounded-full bg-accent/10 px-2 py-0.5 text-[11px] text-accent">
               Preview
@@ -370,7 +389,7 @@ export default function Dashboard() {
             <span className="text-muted">Live prices are locked to now.</span>
             <button
               onClick={clearPreview}
-              className="ml-auto rounded-full border border-border bg-surface2 px-3 py-1 text-xs text-text transition-colors hover:border-accent/50"
+              className="ml-auto rounded-full bg-surface px-3 py-1 text-xs text-text transition-colors hover:bg-surface/70"
             >
               Back to now
             </button>
@@ -378,27 +397,19 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Session clock — keep the wave/tide section visible for every user,
-          before first-run prompts and return-visit panels. */}
-      <div className="mt-4">
-        <SessionClock
-          now={effectiveNow}
-          states={states}
-          useUTC={useUTC}
-          selected={sessionFilter}
-          onSelect={handleSessionSelect}
-          calendar={calendar.data}
-          calendarLoading={calendar.data === null && !calendar.error}
-          hourlyVolProfile={sessionStats.data?.hourlyVolProfile}
-        />
-      </div>
+      {/* The hero IS the session clock now — headline, session row (which also
+          filters the board) and the tide gauge, all live. The full liquidity
+          tide chart moved to its own shelf tab below. */}
+      <Hero
+        now={effectiveNow}
+        states={states}
+        selected={sessionFilter}
+        onSelect={handleSessionSelect}
+        volProfile={sessionStats.data?.hourlyVolProfile}
+      />
 
-      {/* First run: persona picker once, then the intro story (if not dismissed) */}
-      {!presetChosen ? (
-        <PresetPicker />
-      ) : (
-        !heroDismissed && <Hero onDismiss={dismissHero} />
-      )}
+      {/* First run: persona picker, under the hero rather than instead of it */}
+      {!presetChosen && <PresetPicker />}
 
       {/* Return visit: what moved while you were away */}
       {awayDiff && (
@@ -422,60 +433,86 @@ export default function Dashboard() {
         onSelectAsset={openChart}
       />
 
-      {/* Market pulse: sentiment + macro strip (full read on /markets) */}
-      <PulseStrip data={pulse.data} />
+      {/* The shelf. These four panels used to stack as four full-width bands,
+          which made the page scroll like a changelog of everything we shipped.
+          One row of tabs, one panel visible; movers/derivs order still follows
+          the active preset (e.g. Crypto 24/7 surfaces derivs first). */}
+      <div className="mt-7">
+        <div className="shelf scrollbar-none" role="tablist" aria-label="Market panels">
+          {shelfTabs.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={t.id === activeShelfPanel}
+              onClick={() => setShelfPanel(t.id)}
+              className="shelf-tab"
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-      {/* AI insights: actionable recommendations from live market context.
-          Self-hides when no LLM key is configured. Taps scroll to the chart. */}
-      <AiInsights onSelectAsset={openChartAndScroll} />
-
-      {/* Movers + derivatives pulse — order/visibility follow the active preset
-          (e.g. Crypto 24/7 surfaces derivs first; London FX hides them). */}
-      {resolvePanelLayout(["movers", "derivs"] as PanelId[], panelPrefs).map(
-        (panel) =>
-          panel === "movers" ? (
+        <div className="mt-1">
+          {activeShelfPanel === "movers" && (
             <Movers
-              key="movers"
               quoteOf={quoteOf}
               onSelect={openChart}
               states={states}
               isPreview={isPreview}
             />
-          ) : (
-            <DerivsPanel key="derivs" data={derivs.data} onSelect={openChart} />
-          ),
-      )}
+          )}
+          {activeShelfPanel === "derivs" && (
+            <DerivsPanel data={derivs.data} onSelect={openChart} />
+          )}
+          {activeShelfPanel === "tide" && (
+            <div className="mt-4">
+              <SessionClock
+                now={effectiveNow}
+                states={states}
+                useUTC={useUTC}
+                selected={sessionFilter}
+                onSelect={handleSessionSelect}
+                calendar={calendar.data}
+                calendarLoading={calendar.data === null && !calendar.error}
+                hourlyVolProfile={sessionStats.data?.hourlyVolProfile}
+              />
+            </div>
+          )}
+          {activeShelfPanel === "pulse" && <PulseStrip data={pulse.data} />}
+          {activeShelfPanel === "insights" && (
+            <AiInsights onSelectAsset={openChartAndScroll} />
+          )}
+        </div>
+      </div>
 
       {/* Main 3-column shell: markets | chart | news */}
-      <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-12">
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* LEFT — watchlist + one scrollable markets card. On lg+ the column is
             pinned to the chart card's height and the markets list flex-fills
             the remainder, so it never extends past the chart. */}
-        <div className="flex flex-col gap-5 lg:col-span-4 lg:h-[604px] xl:col-span-3">
+        <div className="flex flex-col gap-6 lg:col-span-4 lg:h-[604px] xl:col-span-3">
           {/* Watchlist — a lane here; the full destination lives at /watchlist */}
-          <section className="shrink-0 rounded-2xl border border-border bg-surface p-2">
-            <div className="flex items-baseline justify-between px-3 pb-1 pt-2">
-              <h2 className="text-xs font-medium uppercase tracking-wider text-muted">
-                Watchlist
-              </h2>
+          <section className="module shrink-0 pb-2">
+            <div className="module-hd">
+              <h2 className="module-title">Watchlist</h2>
               {watched.length > 0 && (
                 <Link
                   href="/watchlist"
-                  className="text-[11px] text-accent transition-colors hover:underline"
+                  className="text-[12.5px] text-muted underline decoration-muted/40 underline-offset-4 transition-colors hover:text-text"
                 >
-                  View all →
+                  View all
                 </Link>
               )}
             </div>
             {watched.length === 0 ? (
-              <div className="px-3 pb-3 pt-1 text-sm text-muted">
+              <div className="px-4 pb-3 pt-1 text-sm text-muted">
                 Star anything to pin it here. Try:
                 <span className="mt-2 flex flex-wrap gap-2">
                   {SUGGESTED_STARS.map((id) => (
                     <button
                       key={id}
                       onClick={() => toggleWatch(id)}
-                      className="rounded-full border border-border bg-surface2 px-3 py-1 text-xs text-text transition-colors hover:border-accent/50"
+                      className="rounded-full bg-surface2 px-3 py-1 text-xs text-text transition-colors hover:bg-surface2/70"
                     >
                       + {ASSET_BY_ID[id]?.symbol}
                     </button>
@@ -483,7 +520,7 @@ export default function Dashboard() {
                 </span>
               </div>
             ) : (
-              <div className="max-h-[264px] overflow-y-auto">
+              <div className="max-h-[264px] overflow-y-auto px-2">
                 {watched.map((a) => (
                   <div
                     key={a.id}
@@ -507,8 +544,8 @@ export default function Dashboard() {
           </section>
 
           {/* Markets — single card, scrollable; fills leftover column height on lg+ */}
-          <section className="rounded-2xl border border-border bg-surface lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
-            <div className="shrink-0 border-b border-border p-3">
+          <section className="module lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
+            <div className="shrink-0 p-4 pb-3">
               <div className="flex items-start gap-2">
                 <nav
                   className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
@@ -521,7 +558,7 @@ export default function Dashboard() {
                       className={`min-h-[32px] rounded-full px-3.5 py-1 text-xs transition-colors ${
                         marketFilter === m
                           ? "bg-text font-medium text-bg"
-                          : "border border-border bg-surface2 text-muted hover:text-text"
+                          : "bg-surface2 text-dim hover:text-text"
                       }`}
                     >
                       {m === "all" ? "All" : MARKET_LABEL[m]}
@@ -530,7 +567,7 @@ export default function Dashboard() {
                   {sessionFilter && (
                     <button
                       onClick={() => handleSessionSelect(null)}
-                      className="min-h-[32px] max-w-full truncate rounded-full border border-accent/50 bg-accent/10 px-3.5 py-1 text-xs text-accent"
+                      className="min-h-[32px] max-w-full truncate rounded-full bg-accent/10 px-3.5 py-1 text-xs text-accent"
                     >
                       {states.find((s) => s.def.id === sessionFilter)?.def.name} ✕
                     </button>
@@ -543,7 +580,7 @@ export default function Dashboard() {
                   onClick={openPalette}
                   title="Search all markets (⌘K)"
                   aria-label="Search all markets"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface2 text-muted transition-colors hover:text-text"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface2 text-dim transition-colors hover:text-text"
                 >
                   <svg
                     width={14}
@@ -575,16 +612,16 @@ export default function Dashboard() {
 
                 return (
                   <div key={m}>
-                    <div className="flex items-baseline justify-between px-3 pb-1 pt-3 first:pt-1">
-                      <h3 className="text-[11px] font-medium uppercase tracking-wider text-muted">
+                    <div className="flex items-baseline justify-between px-4 pb-1.5 pt-4 first:pt-1">
+                      <h3 className="section-label">
                         {MARKET_LABEL[m]}
                         {meta.note && (
-                          <span className="ml-2 normal-case tracking-normal text-muted/70">
+                          <span className="ml-2 normal-case tracking-normal text-dim">
                             · {meta.note}
                           </span>
                         )}
                       </h3>
-                      <span className="num text-[10px] text-muted/70">
+                      <span className="num text-[11px] text-dim">
                         {meta.state.error
                           ? "reconnecting…"
                           : timeAgo(meta.state.lastUpdated, now.getTime())}
@@ -592,7 +629,7 @@ export default function Dashboard() {
                     </div>
 
                     {missingKey ? (
-                      <div className="mx-2 mb-2 rounded-lg border border-border bg-surface2 p-3 text-xs text-muted">
+                      <div className="mx-2 mb-2 rounded-lg bg-surface2 p-3 text-xs text-muted">
                         <p className="font-medium text-text">Stocks need a free API key</p>
                         <p className="mt-1">
                           Get one at{" "}
@@ -645,7 +682,7 @@ export default function Dashboard() {
             tint={tint}
             onSelect={openChart}
           />
-          <p className="mt-2 px-1 text-[11px] text-muted/60">
+          <p className="mt-2.5 px-1 text-[12px] text-dim">
             Tip: tap any asset, mover, ticker entry or headline tag to chart it here.
           </p>
         </div>
@@ -664,9 +701,9 @@ export default function Dashboard() {
             footer={
               <Link
                 href="/news"
-                className="block border-t border-border px-4 py-2.5 text-center text-xs text-accent transition-colors hover:bg-surface2"
+                className="block px-4 py-3 text-center text-[12.5px] text-muted underline decoration-muted/40 underline-offset-4 transition-colors hover:text-text"
               >
-                All news →
+                All news
               </Link>
             }
           />

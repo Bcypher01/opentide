@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ThinkingOrb } from "thinking-orbs";
 import { IconX, IconZap } from "./Icons";
 
 // ---------------------------------------------------------------------------
@@ -239,13 +240,13 @@ export default function Assistant() {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 12 }}
           transition={{ duration: 0.18, ease: "easeOut" }}
-          className="fixed bottom-5 right-5 z-50 flex max-h-[min(70vh,560px)] w-[min(380px,calc(100vw-2.5rem))] origin-bottom-right flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl shadow-black/30"
+          className="fixed bottom-5 right-5 z-50 flex max-h-[min(70vh,560px)] w-[min(380px,calc(100vw-2.5rem))] origin-bottom-right flex-col overflow-hidden module shadow-2xl shadow-black/30"
         >
           {/* Header */}
           <div className="flex items-center gap-2 border-b border-border px-4 py-3">
             <IconZap className="h-4 w-4 text-accent" />
             <span className="text-sm font-medium text-text">Ask OpenTide</span>
-            <span className="rounded-full border border-border bg-surface2 px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted/70">
+            <span className="rounded-full bg-surface2 px-2 py-0.5 text-[10px] uppercase tracking-wide text-dim">
               beta
             </span>
             <button
@@ -269,7 +270,7 @@ export default function Assistant() {
                     <button
                       key={s}
                       onClick={() => ask(s)}
-                      className="rounded-full border border-border bg-surface2/60 px-3 py-1 text-xs text-muted transition-colors hover:border-accent/50 hover:text-text"
+                      className="rounded-full bg-surface2/60 px-3 py-1 text-xs text-muted transition-colors hover:bg-surface2 hover:text-text"
                     >
                       {s}
                     </button>
@@ -289,7 +290,7 @@ export default function Assistant() {
                   className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-snug ${
                     t.role === "user"
                       ? "bg-accent/15 text-text"
-                      : "border border-border bg-surface2/50 text-text"
+                      : "bg-surface2/50 text-text"
                   }`}
                 >
                   {t.role === "assistant" ? renderWithLinks(t.text) : t.text}
@@ -298,16 +299,26 @@ export default function Assistant() {
             ))}
 
             {busy && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* Two honest states rather than a label-to-animation lookup:
+                    orbiting while the model is thinking, scanning while tools
+                    are actually running. The orb carries the motion, so the
+                    per-chip pulsing dots are gone — accent stays "live/now". */}
+                <ThinkingOrb
+                  state={chips.length === 0 ? "working" : "searching"}
+                  size={20}
+                  theme="dark"
+                  className="shrink-0"
+                  aria-hidden="true"
+                />
                 {chips.length === 0 ? (
-                  <span className="text-xs text-muted">Thinking…</span>
+                  <span className="text-xs text-dim">Thinking…</span>
                 ) : (
                   chips.map((c) => (
                     <span
                       key={c}
-                      className="flex items-center gap-1.5 rounded-full border border-border bg-surface2 px-2.5 py-1 text-[11px] text-muted"
+                      className="rounded-full bg-surface2 px-2.5 py-1 text-[11px] text-dim"
                     >
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
                       {c}…
                     </span>
                   ))
@@ -330,7 +341,7 @@ export default function Assistant() {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about a market…"
               disabled={busy}
-              className="min-w-0 flex-1 bg-transparent px-1 text-sm text-text placeholder:text-muted/60 focus:outline-none disabled:opacity-50"
+              className="min-w-0 flex-1 bg-transparent px-1 text-sm text-text placeholder:text-dim focus:outline-none disabled:opacity-50"
             />
             <button
               type="submit"
@@ -341,7 +352,7 @@ export default function Assistant() {
             </button>
           </form>
 
-          <p className="px-4 pb-3 text-[10px] leading-snug text-muted/60">
+          <p className="px-4 pb-3 text-[10px] leading-snug text-dim">
             Grounded in live market data · not financial advice. Can&apos;t place
             trades. Verify before acting.
           </p>

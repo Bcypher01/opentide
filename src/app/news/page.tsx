@@ -24,7 +24,7 @@ import NewsFilters, {
   EMPTY_FILTERS,
   type NewsFilterState,
 } from "@/components/NewsFilters";
-import { IconArrowUpRight, IconCalendar, IconNews } from "@/components/Icons";
+import { IconArrowUpRight } from "@/components/Icons";
 import type { NewsItem } from "@/components/NewsFeed";
 
 interface NewsPayload {
@@ -166,14 +166,10 @@ function NewsPageInner() {
     <AppShell>
       <div>
         <header className="mt-2">
-          <h1 className="font-display flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
-            <IconNews size={22} className="text-accent" />
-            Newswire
-          </h1>
-          <p className="mt-1.5 max-w-2xl text-sm text-muted">
-            Seven free wires, one stream — every story tagged to the markets and assets it
-            affects, and weighted by likely impact. Filter to what you trade; tap an asset to
-            chart it.
+          <h1 className="font-display text-[28px] font-semibold tracking-tight">Newswire</h1>
+          <p className="mt-2 max-w-[58ch] text-sm leading-relaxed text-muted">
+            Seven free wires, one stream — every story tagged to the assets it affects and
+            weighted by likely impact. Tap an asset to chart it.
           </p>
         </header>
 
@@ -181,7 +177,7 @@ function NewsPageInner() {
         <div
           ref={filterBarRef}
           style={{ top: headerH }}
-          className="sticky z-10 -mx-1 mt-4 rounded-xl border border-border bg-bg/85 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-bg/70"
+          className="sticky z-10 -mx-1 mt-4 rounded-xl border border-white/[0.055] bg-bg/85 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-bg/70"
         >
           <NewsFilters
             filters={filters}
@@ -220,7 +216,7 @@ function NewsPageInner() {
                   }`}
                 >
                   {a.symbol}
-                  <span className="num text-[10px] text-muted/70">{count}</span>
+                  <span className="num text-[10px] text-dim">{count}</span>
                 </button>
               );
             })}
@@ -230,7 +226,7 @@ function NewsPageInner() {
         <div className="mt-4 grid gap-5 lg:grid-cols-12">
           {/* The wire */}
           <div className="lg:col-span-9">
-            <section className="rounded-2xl border border-border bg-surface p-2">
+            <section className="module p-2">
               {loading && (
                 <div className="p-1">
                   {[
@@ -265,7 +261,7 @@ function NewsPageInner() {
                   <p className="text-sm text-muted">No stories match these filters.</p>
                   <button
                     onClick={clear}
-                    className="mt-2 text-xs text-accent transition-colors hover:underline"
+                    className="mt-2 text-[12.5px] text-muted underline decoration-muted/40 underline-offset-4 transition-colors hover:text-text"
                   >
                     Clear filters
                   </button>
@@ -278,10 +274,8 @@ function NewsPageInner() {
                     style={{ top: groupTop }}
                     className="sticky z-[1] flex items-center gap-2 bg-surface/95 px-3 pb-1 pt-3 backdrop-blur"
                   >
-                    <h2 className="text-[11px] font-medium uppercase tracking-wider text-muted">
-                      {BUCKET_LABEL[g.bucket]}
-                    </h2>
-                    <span className="num text-[10px] text-muted/60">{g.items.length}</span>
+                    <h2 className="section-label">{BUCKET_LABEL[g.bucket]}</h2>
+                    <span className="num text-[10px] text-dim">{g.items.length}</span>
                   </div>
 
                   {g.items.map((it, i) => {
@@ -295,7 +289,7 @@ function NewsPageInner() {
                         className="rounded-xl px-3 py-3 transition-colors hover:bg-surface2"
                       >
                         <a href={it.link} target="_blank" rel="noreferrer" className="block">
-                          <h3 className="text-sm leading-snug text-text">{it.title}</h3>
+                          <h3 className="text-[13.5px] leading-snug text-text">{it.title}</h3>
                         </a>
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
                           <span
@@ -340,13 +334,13 @@ function NewsPageInner() {
                                 >
                                   {a.symbol}
                                   {cov > 1 && (
-                                    <span className="num ml-1 text-muted/60">{cov}</span>
+                                    <span className="num ml-1 text-dim">{cov}</span>
                                   )}
                                 </button>
                                 <button
                                   onClick={() => openChart(id)}
                                   title={`Chart ${a.symbol}`}
-                                  className="border-l border-border/60 py-0.5 pl-1 pr-1.5 text-[10px] text-muted transition-colors hover:text-accent"
+                                  className="border-l border-white/[0.06] py-0.5 pl-1 pr-1.5 text-[10px] text-dim transition-colors hover:text-text"
                                 >
                                   <IconArrowUpRight size={11} />
                                 </button>
@@ -354,7 +348,7 @@ function NewsPageInner() {
                             );
                           })}
                           {ranked.length > 3 && (
-                            <span className="rounded-full px-1.5 py-0.5 text-[10px] text-muted/60">
+                            <span className="rounded-full px-1.5 py-0.5 text-[10px] text-dim">
                               +{ranked.length - 3}
                             </span>
                           )}
@@ -380,9 +374,9 @@ function NewsPageInner() {
 
           {/* Sidebar */}
           <div className="space-y-5 lg:col-span-3">
-            <section className="hidden rounded-2xl border border-border bg-surface p-4 xl:block">
-              <h2 className="font-display text-sm font-semibold">Markets on the wire</h2>
-              <p className="mt-0.5 text-[11px] text-muted/70">
+            <section className="module hidden p-4 xl:block">
+              <h2 className="module-title">Markets on the wire</h2>
+              <p className="mt-0.5 text-[11px] text-dim">
                 most-covered assets right now — tap to filter the stream
               </p>
               <div className="mt-3">
@@ -433,7 +427,7 @@ function NewsPageInner() {
                           <button
                             onClick={() => openChart(id)}
                             title={`Chart ${a.symbol}`}
-                            className="shrink-0 rounded-md p-1 text-muted transition-colors hover:text-accent"
+                            className="shrink-0 rounded-md p-1 text-dim transition-colors hover:text-text"
                           >
                             <IconArrowUpRight size={13} />
                           </button>
@@ -447,14 +441,9 @@ function NewsPageInner() {
 
             {/* Phase 4 — upcoming high-impact events */}
             {upcoming.length > 0 && (
-              <section className="rounded-2xl border border-border bg-surface p-4">
-                <h2 className="font-display flex items-center gap-2 text-sm font-semibold">
-                  <IconCalendar size={15} className="text-muted" />
-                  Coming up
-                </h2>
-                <p className="mt-0.5 text-[11px] text-muted/70">
-                  next high-impact economic releases
-                </p>
+              <section className="module p-4">
+                <h2 className="module-title">Coming up</h2>
+                <p className="mt-1.5 text-[11px] text-dim">next high-impact economic releases</p>
                 <ul className="mt-3 space-y-2">
                   {upcoming.map((e) => (
                     <li key={e.id} className="flex items-center gap-2 text-xs">
@@ -465,7 +454,7 @@ function NewsPageInner() {
                       />
                       <span className="min-w-0 flex-1 truncate text-text">
                         {e.title}
-                        <span className="ml-1 text-muted/70">{e.country}</span>
+                        <span className="ml-1 text-dim">{e.country}</span>
                       </span>
                       <span className="num shrink-0 text-accent">
                         {eventCountdown(e.ts, nowMs)}
@@ -476,9 +465,9 @@ function NewsPageInner() {
               </section>
             )}
 
-            <section className="rounded-2xl border border-border bg-surface p-4">
-              <h2 className="font-display text-sm font-semibold">Sources</h2>
-              <p className="mt-0.5 text-[11px] text-muted/70">
+            <section className="module p-4">
+              <h2 className="module-title">Sources</h2>
+              <p className="mt-0.5 text-[11px] text-dim">
                 free public wires, refreshed every 10 minutes — tap to filter
               </p>
               <ul className="mt-3 space-y-1">
@@ -499,7 +488,7 @@ function NewsPageInner() {
                         }`}
                       >
                         <span>{s.name}</span>
-                        <span className="text-muted/70">{s.market}</span>
+                        <span className="text-dim">{s.market}</span>
                       </button>
                     </li>
                   );
@@ -507,7 +496,7 @@ function NewsPageInner() {
               </ul>
             </section>
 
-            <section className="rounded-2xl border border-border bg-surface p-4 text-xs leading-relaxed text-muted">
+            <section className="module p-4 text-xs leading-relaxed text-dim">
               <span className="font-medium text-text">How tagging &amp; impact work.</span> Each
               headline is scanned for asset names, tickers and central-bank keywords, then tagged
               to the markets it touches and scored for likely impact (macro keywords, breadth and

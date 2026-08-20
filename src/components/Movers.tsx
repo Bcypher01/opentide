@@ -4,7 +4,6 @@ import { ALL_ASSETS, type AssetDef } from "@/lib/assets";
 import { formatChangePct, formatPrice } from "@/lib/format";
 import type { SessionState } from "@/lib/sessions";
 import { MoverCardSkeleton } from "./DashboardSkeleton";
-import { IconTrendingUp } from "./Icons";
 
 interface Quote {
   price: number;
@@ -17,6 +16,13 @@ interface Props {
   states?: SessionState[];
   isPreview?: boolean;
 }
+
+// One grid, hairline gaps, no per-tile borders: the 1px background shows
+// through the gap and reads as a rule. Headers live on the shelf above, so
+// this component renders content only.
+const GRID =
+  "grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-border sm:grid-cols-3 lg:grid-cols-6";
+const CELL = "bg-surface p-3.5 text-left transition-colors hover:bg-surface2";
 
 /** Top movers across all three markets, computed from data we already have. */
 export default function Movers({ quoteOf, onSelect, states = [], isPreview = false }: Props) {
@@ -39,29 +45,21 @@ export default function Movers({ quoteOf, onSelect, states = [], isPreview = fal
       .slice(0, 6);
 
     return (
-      <section key="movers-preview" className="fade-in mt-5" aria-label="Typically active now">
-        <div className="mb-3 flex items-center gap-3">
-          <h2 className="font-display flex items-center gap-2 text-base font-semibold tracking-tight">
-            <IconTrendingUp size={16} className="text-accent" /> Typically active now
-          </h2>
-          <span className="text-xs text-muted">session fit at the preview time</span>
-        </div>
-        <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <section key="movers-preview" className="fade-in mt-4" aria-label="Typically active now">
+        <div className={GRID}>
           {typical.map(({ a, label }) => (
             <button
               key={a.id}
               onClick={() => onSelect(a.id)}
-              className="rounded-xl border border-border bg-surface p-3 text-left transition-colors hover:border-accent/40"
+              className={CELL}
               title={`View ${a.symbol} chart`}
             >
               <div className="flex items-center justify-between gap-1">
-                <span className="truncate text-xs font-medium">{a.symbol}</span>
-                <span className="rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent">
-                  typical
-                </span>
+                <span className="truncate text-[12.5px] font-medium">{a.symbol}</span>
+                <span className="text-[11px] text-dim">typical</span>
               </div>
-              <div className="mt-1.5 truncate text-[11px] text-muted">{a.name}</div>
-              <div className="mt-2 truncate text-[11px] text-text/80">{label}</div>
+              <div className="mt-1.5 truncate text-xs text-dim">{a.name}</div>
+              <div className="mt-2 truncate text-xs text-muted">{label}</div>
             </button>
           ))}
         </div>
@@ -79,14 +77,8 @@ export default function Movers({ quoteOf, onSelect, states = [], isPreview = fal
 
   if (movers.length === 0) {
     return (
-      <section key="movers-loading" className="mt-5" aria-label="Top movers">
-        <div className="mb-3 flex items-center gap-3">
-          <h2 className="font-display flex items-center gap-2 text-base font-semibold tracking-tight">
-            <IconTrendingUp size={16} className="text-accent" /> Movers
-          </h2>
-          <span className="text-xs text-muted">biggest moves across all three markets</span>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <section key="movers-loading" className="mt-4" aria-label="Top movers">
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-border sm:grid-cols-3 lg:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <MoverCardSkeleton key={i} />
           ))}
@@ -96,33 +88,25 @@ export default function Movers({ quoteOf, onSelect, states = [], isPreview = fal
   }
 
   return (
-    <section key="movers-loaded" className="fade-in mt-5" aria-label="Top movers">
-      <div className="mb-3 flex items-center gap-3">
-        <h2 className="font-display flex items-center gap-2 text-base font-semibold tracking-tight">
-          <IconTrendingUp size={16} className="text-accent" /> Movers
-        </h2>
-        <span className="text-xs text-muted">biggest moves across all three markets</span>
-      </div>
-      <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3 lg:grid-cols-6">
+    <section key="movers-loaded" className="fade-in mt-4" aria-label="Top movers">
+      <div className={GRID}>
         {movers.map(({ a, q }) => {
           const up = q.changePct >= 0;
           return (
             <button
               key={a.id}
               onClick={() => onSelect(a.id)}
-              className="flex flex-col rounded-xl border border-border bg-surface p-3 transition-colors hover:border-accent/40"
+              className={CELL}
               title={`View ${a.symbol} chart`}
             >
-              <div className="text-left">
-                <div className="flex items-center justify-between gap-1">
-                  <span className="truncate text-xs font-medium">{a.symbol}</span>
-                  <span className={`num text-xs ${up ? "text-bull" : "text-bear"}`}>
-                    {up ? "▲" : "▼"} {formatChangePct(q.changePct)}
-                  </span>
-                </div>
-                <div className="num mt-1.5 text-sm">{formatPrice(q.price, a.market)}</div>
-                <div className="mt-0.5 truncate text-[11px] text-muted">{a.name}</div>
+              <div className="flex items-center justify-between gap-1">
+                <span className="truncate text-[12.5px] font-medium">{a.symbol}</span>
+                <span className={`num text-[12.5px] ${up ? "text-bull" : "text-bear"}`}>
+                  {formatChangePct(q.changePct)}
+                </span>
               </div>
+              <div className="num mt-1.5 text-[15px]">{formatPrice(q.price, a.market)}</div>
+              <div className="mt-0.5 truncate text-xs text-dim">{a.name}</div>
             </button>
           );
         })}

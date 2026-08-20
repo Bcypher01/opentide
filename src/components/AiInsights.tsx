@@ -45,7 +45,7 @@ const ACTION_META: Record<RecAction, { label: string; cls: string }> = {
   long: { label: "Long bias", cls: "text-bull border-bull/40 bg-bull/10" },
   short: { label: "Short bias", cls: "text-bear border-bear/40 bg-bear/10" },
   hedge: { label: "Hedge", cls: "text-accent border-accent/40 bg-accent/10" },
-  watch: { label: "Watch", cls: "text-muted border-border bg-surface2" },
+  watch: { label: "Watch", cls: "text-dim border-transparent bg-surface2" },
 };
 
 function RecRow({
@@ -68,7 +68,7 @@ function RecRow({
   return (
     <div
       onClick={() => chartTarget && onSelectAsset(chartTarget)}
-      className={`flex gap-3 rounded-xl border border-border bg-surface2/40 p-3 transition-colors ${
+      className={`flex gap-3 rounded-xl bg-surface2/60 p-3 transition-colors ${
         tappable ? "cursor-pointer hover:border-accent/50" : ""
       }`}
     >
@@ -99,7 +99,7 @@ function RecRow({
         <p className="mt-0.5 text-xs leading-snug text-muted">{rec.rationale}</p>
       </div>
       {tappable && (
-        <IconChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted/60" />
+        <IconChevronRight className="mt-1 h-4 w-4 shrink-0 text-dim" />
       )}
     </div>
   );
@@ -109,7 +109,7 @@ function RecRow({
  *  shifts as the card moves between loading → ready. */
 function CardShell({ children }: { children: ReactNode }) {
   return (
-    <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-surface">
+    <section className="module mt-4">
       {children}
     </section>
   );
@@ -164,7 +164,7 @@ function InsightsLoading() {
                 className={`fade-in flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] ${
                   active
                     ? "border-accent/40 bg-accent/10 text-text"
-                    : "border-border bg-surface2 text-muted"
+                    : "border-transparent bg-surface2 text-dim"
                 }`}
               >
                 <span
@@ -184,7 +184,7 @@ function InsightsLoading() {
           {Array.from({ length: 2 }).map((_, i) => (
             <div
               key={i}
-              className="flex gap-3 rounded-xl border border-border bg-surface2/40 p-3"
+              className="flex gap-3 rounded-xl bg-surface2/60 p-3"
             >
               <div className="skeleton h-6 w-1 shrink-0 rounded-full" />
               <div className="min-w-0 flex-1">
@@ -208,7 +208,7 @@ function InsightsUnavailable() {
       <div className="flex items-center gap-2 px-4 py-3">
         <IconZap className="h-4 w-4 text-muted" />
         <span className="text-sm font-medium text-text">AI insights</span>
-        <span className="ml-auto rounded-full border border-border bg-surface2 px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted">
+        <span className="ml-auto rounded-full bg-surface2 px-2 py-0.5 text-[10px] uppercase tracking-wide text-dim">
           unavailable
         </span>
       </div>
@@ -324,7 +324,7 @@ export default function AiInsights({ onSelectAsset }: Props) {
   }
 
   return (
-    <section className="fade-in mt-4 overflow-hidden rounded-2xl border border-border bg-surface">
+    <section className="module fade-in mt-4">
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
@@ -337,12 +337,12 @@ export default function AiInsights({ onSelectAsset }: Props) {
             className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${
               personalized
                 ? "border-accent/40 bg-accent/10 text-accent"
-                : "border-border bg-surface2 text-muted"
+                : "border-transparent bg-surface2 text-dim"
             }`}
           >
             {personalized ? "Watchlist" : "Market-wide"}
           </span>
-          <span className="rounded-full border border-border bg-surface2 px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted">
+          <span className="rounded-full bg-surface2 px-2 py-0.5 text-[10px] uppercase tracking-wide text-dim">
             {recs.length} ideas
           </span>
         </span>
@@ -358,8 +358,8 @@ export default function AiInsights({ onSelectAsset }: Props) {
           {/* Empty watchlist → these are market-wide ideas. Nudge the user to
               star assets so future insights are tailored to what they track. */}
           {!personalized && (
-            <div className="flex items-start gap-2 rounded-xl border border-dashed border-border bg-surface2/30 px-3 py-2">
-              <IconStar className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted/70" />
+            <div className="flex items-start gap-2 rounded-xl bg-surface2/40 px-3 py-2">
+              <IconStar className="mt-0.5 h-3.5 w-3.5 shrink-0 text-dim" />
               <p className="text-xs leading-snug text-muted">
                 These are market-wide ideas. Star assets in your watchlist to get
                 insights tailored to what you&apos;re tracking.
@@ -374,7 +374,7 @@ export default function AiInsights({ onSelectAsset }: Props) {
               onSelectAsset={onSelectAsset}
             />
           ))}
-          <p className="px-1 pt-1 text-[10px] leading-snug text-muted/60">
+          <p className="px-1 pt-1 text-[10px] leading-snug text-dim">
             AI-generated from live market data · not financial advice. Verify
             before acting.
           </p>

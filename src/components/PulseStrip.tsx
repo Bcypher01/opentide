@@ -65,7 +65,7 @@ function Chip({
   return (
     <div
       className={`flex shrink-0 items-baseline gap-2 rounded-full border bg-surface py-1.5 pl-3.5 pr-1.5 transition-colors ${
-        open ? "border-accent/60" : "border-border"
+        open ? "border-accent/60" : "border-transparent"
       }`}
     >
       <span className="text-[10px] font-medium uppercase tracking-wider text-muted">
@@ -297,10 +297,10 @@ export default function PulseStrip({ data }: Props) {
   return (
     <section key="pulse-loaded" aria-label="Market pulse" className="fade-in mt-4">
       <div className="mb-1.5 flex items-center gap-2 px-0.5">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-muted/70">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-dim">
           Market pulse
         </span>
-        <span className="text-[10px] text-muted/50">
+        <span className="text-[10px] text-dim/70">
           tap ⓘ on any tile to learn what it means
         </span>
       </div>
@@ -320,7 +320,7 @@ export default function PulseStrip({ data }: Props) {
         <div
           role="region"
           aria-label={`About ${active.explainer.title}`}
-          className="mt-2 rounded-xl border border-accent/30 bg-surface p-3.5"
+          className="mt-2 rounded-xl bg-surface p-3.5"
         >
           <div className="flex items-start justify-between gap-3">
             <h3 className="text-xs font-semibold capitalize text-text">
@@ -343,7 +343,7 @@ export default function PulseStrip({ data }: Props) {
             <span className="font-medium text-muted">Why it matters — </span>
             {active.explainer.why}
           </p>
-          <p className="mt-2 text-[10px] uppercase tracking-wider text-muted/60">
+          <p className="mt-2 text-[10px] uppercase tracking-wider text-dim">
             Source: {active.explainer.source}
           </p>
         </div>

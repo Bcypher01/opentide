@@ -62,7 +62,7 @@ function PriceRowInner({
           onToggleWatch(asset.id);
         }}
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors ${
-          watched ? "text-accent" : "text-muted/50 hover:text-muted"
+          watched ? "text-accent" : "text-dim/60 hover:text-muted"
         } ${pop ? "star-pop" : ""}`}
       >
         <IconStar size={15} filled={watched} />
@@ -70,7 +70,7 @@ function PriceRowInner({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <span className="truncate text-sm font-medium">{asset.symbol}</span>
+          <span className="truncate text-[13.5px] font-medium">{asset.symbol}</span>
           {live && !isPreview && (
             <span
               className="pulse-dot h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
@@ -79,7 +79,7 @@ function PriceRowInner({
           )}
           {isPreview && (
             <span
-              className="shrink-0 rounded-full border border-border bg-surface2 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-muted"
+              className="shrink-0 rounded-full bg-surface2 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-dim"
               title="Preview context; price remains live"
             >
               locked
@@ -87,7 +87,7 @@ function PriceRowInner({
           )}
         </div>
         <div className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate text-xs text-muted">{asset.name}</span>
+          <span className="truncate text-xs text-dim">{asset.name}</span>
           {sessionLabel && (
             <span className="shrink-0 truncate rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent">
               {sessionLabel}
@@ -100,14 +100,13 @@ function PriceRowInner({
         {price === null ? (
           <div className="skeleton ml-auto h-4 w-20" />
         ) : (
-          <div className="num text-sm">{formatPrice(price, asset.market)}</div>
+          <div className="num text-[13.5px]">{formatPrice(price, asset.market)}</div>
         )}
         <div
           className={`num text-xs ${
-            changePct === null ? "text-muted" : up ? "text-bull" : "text-bear"
+            changePct === null ? "text-dim" : up ? "text-bull" : "text-bear"
           }`}
         >
-          {changePct !== null && (up ? "▲ " : "▼ ")}
           {formatChangePct(changePct)}
         </div>
       </div>

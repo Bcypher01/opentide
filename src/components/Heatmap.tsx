@@ -57,7 +57,7 @@ function Tiles({
           onClick={() => onSelect(a.id)}
           title={`${a.name} · ${pct > 0 ? "+" : ""}${pct.toFixed(2)}% 24h — tap to chart`}
           style={{ backgroundColor: tileBg(pct, scale) }}
-          className="flex aspect-[5/4] flex-col items-center justify-center rounded-lg border border-border/60 transition-transform hover:scale-[1.04]"
+          className="flex aspect-[5/4] flex-col items-center justify-center rounded-lg border border-white/[0.06] transition-transform hover:scale-[1.04]"
         >
           <span className="text-xs font-semibold text-text">{a.symbol}</span>
           <span className="num text-[10px] text-text/80">
@@ -118,8 +118,8 @@ export default function Heatmap({ quoteOf, strength, onSelect }: Props) {
   return (
     <section className="mt-5" aria-label="Market heatmaps">
       <div className="mb-2 flex flex-wrap items-baseline gap-3">
-        <h2 className="font-display text-base font-semibold tracking-tight">Heatmap</h2>
-        <span className="text-xs text-muted">
+        <h2 className="section-label">Heatmap</h2>
+        <span className="text-xs text-dim">
           {tab === "forex" ? "currency strength · ECB daily" : "24h change at a glance"}
         </span>
         <nav className="ml-auto flex gap-1.5" aria-label="Heatmap market">
@@ -132,8 +132,8 @@ export default function Heatmap({ quoteOf, strength, onSelect }: Props) {
                 tab === t.id
                   ? "bg-text font-medium text-bg"
                   : t.available
-                    ? "border border-border bg-surface2 text-muted hover:text-text"
-                    : "cursor-not-allowed border border-border/50 text-muted/40"
+                    ? "bg-surface2 text-muted hover:text-text"
+                    : "cursor-not-allowed border border-white/[0.05] text-dim/60"
               }`}
             >
               {t.label}
@@ -142,7 +142,7 @@ export default function Heatmap({ quoteOf, strength, onSelect }: Props) {
         </nav>
       </div>
 
-      <div className="rounded-2xl border border-border bg-surface p-3">
+      <div className="module p-3">
         {tab === "crypto" && (
           <Tiles assets={CRYPTO_ASSETS} quoteOf={quoteOf} scale={6} onSelect={onSelect} />
         )}
@@ -153,7 +153,7 @@ export default function Heatmap({ quoteOf, strength, onSelect }: Props) {
           (strength && strength.length > 0 ? (
             <>
               <StrengthMeter strength={strength} />
-              <p className="mt-2.5 text-[10px] leading-relaxed text-muted/70">
+              <p className="mt-2.5 text-[10px] leading-relaxed text-dim">
                 Each bar is a currency&apos;s average move against all the others today — the
                 strongest at the top. Derived from ECB daily reference rates, so it refreshes once
                 per business day.

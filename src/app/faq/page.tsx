@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
-import { IconArrowUpRight, IconChevronDown, IconClock, IconHelp } from "@/components/Icons";
+import { IconArrowUpRight, IconChevronDown } from "@/components/Icons";
 import { FAQ, faqJsonLd } from "@/lib/faq";
 
 const DESCRIPTION =
@@ -32,8 +32,7 @@ export default function FaqPage() {
 
       <article className="max-w-6xl pb-16">
         <header className="mt-2">
-          <h1 className="font-display flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
-            <IconHelp size={22} className="text-accent" />
+          <h1 className="font-display text-[28px] font-semibold tracking-tight">
             Sessions &amp; FAQ
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
@@ -55,13 +54,9 @@ export default function FaqPage() {
           {/* Session-times reference card — the core concept, scannable at a glance */}
           <section
             aria-labelledby="sessions-heading"
-            className="rounded-2xl border border-border bg-surface p-5 lg:sticky lg:top-20"
+            className="module p-5 lg:sticky lg:top-20"
           >
-            <h2
-              id="sessions-heading"
-              className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted"
-            >
-              <IconClock size={14} className="text-accent" />
+            <h2 id="sessions-heading" className="module-title">
               The four major sessions
             </h2>
             <dl className="mt-4 grid grid-cols-1 gap-2">
@@ -94,14 +89,14 @@ export default function FaqPage() {
 
           {/* Accordion */}
           <section aria-labelledby="faq-heading">
-            <h2 id="faq-heading" className="font-display text-lg font-semibold tracking-tight text-text">
+            <h2 id="faq-heading" className="font-display text-xl font-semibold tracking-tight text-text">
               Frequently asked questions
             </h2>
             <div className="mt-4 space-y-2.5">
               {FAQ.map(({ q, a }) => (
                 <details
                   key={q}
-                  className="group rounded-2xl border border-border bg-surface transition-colors open:bg-surface2 hover:border-border/80"
+                  className="group module transition-colors open:bg-surface2 hover:border-border/80"
                 >
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-sm font-medium text-text marker:content-none [&::-webkit-details-marker]:hidden">
                     {q}
@@ -117,7 +112,7 @@ export default function FaqPage() {
 
             <Link
               href="/"
-              className="mt-10 inline-flex items-center gap-1.5 text-sm text-accent transition-colors hover:text-text"
+              className="mt-10 inline-flex items-center gap-1.5 text-[13.5px] text-muted underline decoration-muted/40 underline-offset-4 transition-colors hover:text-text"
             >
               Open the dashboard
               <IconArrowUpRight size={15} />
