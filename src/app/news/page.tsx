@@ -135,14 +135,10 @@ function NewsPageInner() {
     ? nextHighImpact(calendar.data.events, nowMs, 3)
     : [];
 
-  // The filter bar and the day-group headers stack as two sticky layers under
-  // the global app header. The filter bar's height changes when active-filter
-  // chips appear, so a hard-coded offset would leave a gap (or overlap). Stick
-  // the filter bar just below the app header, and drive the group-header offset
-  // from the filter bar's measured height so they're always flush.
+  // The filter bar sticks below the global app header. Bucket dividers stay in
+  // normal document flow so they never float over a headline while scrolling.
   const filterBarRef = useRef<HTMLDivElement>(null);
   const [headerH, setHeaderH] = useState(56);
-  const [groupTop, setGroupTop] = useState(116);
   useEffect(() => {
     const filterEl = filterBarRef.current;
     if (!filterEl) return;
@@ -150,7 +146,6 @@ function NewsPageInner() {
       const appHeader = document.querySelector("header.sticky") as HTMLElement | null;
       const hh = appHeader?.offsetHeight ?? 56;
       setHeaderH(hh);
-      setGroupTop(hh + filterEl.offsetHeight);
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -269,13 +264,12 @@ function NewsPageInner() {
               )}
 
               {groups.map((g) => (
-                <div key={g.bucket}>
+                <div key={g.bucket} className="relative">
                   <div
-                    style={{ top: groupTop }}
-                    className="sticky z-[1] flex items-center gap-2 bg-surface/95 px-3 pb-1 pt-3 backdrop-blur"
+                    className="mb-1 flex min-h-10 items-center gap-2 border-b border-white/[0.055] bg-surface px-3 py-2"
                   >
-                    <h2 className="section-label">{BUCKET_LABEL[g.bucket]}</h2>
-                    <span className="num text-[10px] text-dim">{g.items.length}</span>
+                    <h2 className="section-label truncate">{BUCKET_LABEL[g.bucket]}</h2>
+                    <span className="num shrink-0 text-[10px] text-dim">{g.items.length}</span>
                   </div>
 
                   {g.items.map((it, i) => {
@@ -286,7 +280,7 @@ function NewsPageInner() {
                     return (
                       <article
                         key={`${it.link}-${i}`}
-                        className="rounded-xl px-3 py-3 transition-colors hover:bg-surface2"
+                        className="relative z-0 rounded-xl px-3 py-3 transition-colors hover:bg-surface2"
                       >
                         <a href={it.link} target="_blank" rel="noreferrer" className="block">
                           <h3 className="text-[13.5px] leading-snug text-text">{it.title}</h3>
