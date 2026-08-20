@@ -19,7 +19,7 @@ const fmtOi = (usd: number) =>
 /** Loading state — pill-shaped placeholders matching the funding/OI chips. */
 function DerivsPanelSkeleton() {
   return (
-    <section key="derivs-loading" className="mt-5" aria-label="Derivatives pulse">
+    <section key="derivs-loading" className="mt-4" aria-label="Derivatives pulse">
       <div className="mb-2 flex items-baseline gap-3">
         <div className="skeleton h-4 w-24 rounded" />
         <div className="skeleton h-3 w-48 rounded" />
@@ -51,7 +51,7 @@ export default function DerivsPanel({ data, onSelect }: Props) {
     .slice(0, 4);
 
   return (
-    <section key="derivs-loaded" className="fade-in mt-5" aria-label="Derivatives pulse">
+    <section key="derivs-loaded" className="fade-in mt-4" aria-label="Derivatives pulse">
       <div className="mb-2 flex items-baseline gap-3">
         <h2 className="font-display text-base font-semibold tracking-tight">
           Derivatives
@@ -71,7 +71,7 @@ export default function DerivsPanel({ data, onSelect }: Props) {
               title={`${f.symbol} perp funding rate — ${
                 crowdedLongs ? "longs pay shorts" : "shorts pay longs"
               }. Tap to chart.`}
-              className="flex shrink-0 items-baseline gap-2 rounded-full border border-border bg-surface px-3.5 py-1.5 transition-colors hover:border-accent/40"
+              className="flex shrink-0 items-baseline gap-2 rounded-full bg-surface px-3.5 py-1.5 transition-colors hover:bg-surface2"
             >
               <span className="text-xs font-medium">{f.symbol}</span>
               <span
@@ -95,7 +95,7 @@ export default function DerivsPanel({ data, onSelect }: Props) {
                 ? ` · long/short account ratio ${d.longShortRatio.toFixed(2)}`
                 : ""
             }`}
-            className="flex shrink-0 items-baseline gap-2 rounded-full border border-border bg-surface px-3.5 py-1.5 transition-colors hover:border-accent/40"
+            className="flex shrink-0 items-baseline gap-2 rounded-full bg-surface px-3.5 py-1.5 transition-colors hover:bg-surface2"
           >
             <span className="text-[10px] font-medium uppercase tracking-wider text-muted">
               {d.symbol} OI

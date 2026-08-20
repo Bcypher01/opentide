@@ -116,7 +116,7 @@ export default function NotifSettings({ onClose }: Props) {
     <div
       role="dialog"
       aria-label="Notification settings"
-      className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-border bg-surface shadow-2xl"
+      className="absolute right-0 top-full z-50 mt-2 w-72 module shadow-2xl"
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -232,7 +232,7 @@ export default function NotifSettings({ onClose }: Props) {
           </>
         )}
 
-        <p className="mt-4 text-[10px] text-muted/50">
+        <p className="mt-4 text-[10px] text-dim/70">
           {hasPush
             ? "No account needed · delivered even when the tab is closed"
             : "In-tab only · no account needed · no data leaves your browser"}

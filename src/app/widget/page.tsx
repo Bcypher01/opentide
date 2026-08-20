@@ -22,7 +22,7 @@ export default function WidgetPage() {
     <div className="min-h-screen bg-bg p-3">
       {/* Branding strip */}
       <div className="mb-2 flex items-center justify-between px-1">
-        <span className="text-[10px] font-medium uppercase tracking-widest text-muted/60">
+        <span className="text-[10px] font-medium uppercase tracking-widest text-dim">
           Market session clock
         </span>
         <a

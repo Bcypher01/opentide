@@ -51,7 +51,7 @@ export default function Ticker({ quoteOf, onSelect, isPreview = false }: Props) 
       aria-hidden="true"
     >
       {isPreview && (
-        <span className="absolute right-3 top-1 z-10 rounded-full border border-border bg-bg/90 px-2 py-0.5 text-[10px] text-muted">
+        <span className="absolute right-3 top-1 z-10 rounded-full bg-surface/90 px-2 py-0.5 text-[10px] text-muted">
           live locked
         </span>
       )}

@@ -81,13 +81,13 @@ export default function DigestView({
 
   if (watched.length === 0) {
     return (
-      <div className="mt-8 rounded-2xl border border-border bg-surface p-6 text-center">
+      <div className="mt-8 module p-6 text-center">
         <p className="text-sm text-muted">
           Star assets from the dashboard to see them here.
         </p>
         <button
           onClick={onExit}
-          className="mt-4 flex items-center gap-1 rounded-full border border-border bg-surface2 px-4 py-1.5 text-xs text-muted hover:text-text"
+          className="mt-4 flex items-center gap-1 rounded-full bg-surface2 px-4 py-1.5 text-xs text-muted hover:text-text"
         >
           <IconChevronLeft size={12} /> Back to dashboard
         </button>
@@ -107,14 +107,14 @@ export default function DigestView({
         </div>
         <button
           onClick={onExit}
-          className="flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-muted transition-colors hover:text-text"
+          className="flex items-center gap-1 rounded-full bg-surface px-3 py-1.5 text-xs text-muted transition-colors hover:text-text"
         >
           <IconChevronLeft size={12} /> Full dashboard
         </button>
       </div>
 
       {/* Watchlist rows */}
-      <section className="rounded-2xl border border-border bg-surface">
+      <section className="module">
         <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
           <IconStar size={13} filled className="text-accent" />
           <h2 className="text-xs font-medium uppercase tracking-wider text-muted">
@@ -168,7 +168,7 @@ export default function DigestView({
                         </span>
                       </>
                     ) : (
-                      <span className="text-xs text-muted/60">—</span>
+                      <span className="text-xs text-dim">—</span>
                     )}
                   </div>
                 </div>
@@ -176,7 +176,7 @@ export default function DigestView({
                 {/* Session context */}
                 {sessionInfo && (
                   <div className="mt-1.5 flex items-center gap-1.5">
-                    <IconClock size={11} className="shrink-0 text-muted/60" />
+                    <IconClock size={11} className="shrink-0 text-dim" />
                     {sessionInfo.status === "open" ? (
                       <span className="text-[11px] text-muted">
                         <span
@@ -185,7 +185,7 @@ export default function DigestView({
                         />
                         {sessionInfo.state.def.name} live
                         {sessionInfo.state.closesAt && (
-                          <span className="num text-muted/70">
+                          <span className="num text-dim">
                             {" · closes in "}
                             {formatCountdown(sessionInfo.state.closesAt - nowMs)}
                           </span>
@@ -217,7 +217,7 @@ export default function DigestView({
                         >
                           {item.title}
                         </a>
-                        <span className="ml-1.5 text-[10px] text-muted/50">
+                        <span className="ml-1.5 text-[10px] text-dim/70">
                           {timeAgo(item.ts, nowMs)}
                         </span>
                       </li>
@@ -232,7 +232,7 @@ export default function DigestView({
 
       {/* Next high-impact events */}
       {upcomingEvents.length > 0 && (
-        <section className="rounded-2xl border border-border bg-surface">
+        <section className="module">
           <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
             <IconCalendar size={13} className="text-muted" />
             <h2 className="text-xs font-medium uppercase tracking-wider text-muted">
@@ -262,7 +262,7 @@ export default function DigestView({
 
       {/* All-market news that isn't watchlist-specific */}
       {news.length > 0 && (
-        <section className="rounded-2xl border border-border bg-surface">
+        <section className="module">
           <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
             <IconTrendingUp size={13} className="text-muted" />
             <h2 className="text-xs font-medium uppercase tracking-wider text-muted">
@@ -297,7 +297,7 @@ export default function DigestView({
                   {item.market}
                 </span>
                 <span className="min-w-0 flex-1 leading-relaxed">{item.title}</span>
-                <span className="num shrink-0 text-muted/60">
+                <span className="num shrink-0 text-dim">
                   {timeAgo(item.ts, nowMs)}
                 </span>
               </a>

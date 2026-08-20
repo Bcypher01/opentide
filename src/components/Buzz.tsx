@@ -30,22 +30,19 @@ interface Props {
 }
 
 function Panel({
-  icon,
   title,
   sub,
   children,
 }: {
-  icon: React.ReactNode;
   title: string;
   sub: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col rounded-2xl border border-border bg-surface p-4">
-      <div className="flex items-center gap-2">
-        <span className="text-accent">{icon}</span>
-        <h3 className="font-display text-sm font-semibold">{title}</h3>
-        <span className="ml-auto text-[10px] uppercase tracking-wider text-muted/60">{sub}</span>
+    <div className="module flex flex-col p-4">
+      <div className="flex items-baseline gap-3">
+        <h3 className="module-title">{title}</h3>
+        <span className="ml-auto text-[11px] text-dim">{sub}</span>
       </div>
       <div className="mt-3 min-h-0 flex-1">{children}</div>
     </div>
@@ -65,7 +62,7 @@ function Skeletons({ n = 5 }: { n?: number }) {
 export function TrendingCoinsPanel({ onSelect }: Props) {
   const { data } = usePolling<BuzzPayload>("/api/buzz", 600_000);
   return (
-    <Panel icon={<IconFlame size={15} />} title="Trending coins" sub="most searched · CoinGecko">
+    <Panel title="Trending coins" sub="most searched · CoinGecko">
       {!data ? (
         <Skeletons />
       ) : data.coins.length === 0 ? (
@@ -81,7 +78,7 @@ export function TrendingCoinsPanel({ onSelect }: Props) {
                   className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface2"
                   title={`View ${c.name} chart`}
                 >
-                  <span className="num w-5 shrink-0 text-center text-[11px] text-muted/60">
+                  <span className="num w-5 shrink-0 text-center text-[11px] text-dim">
                     {i + 1}
                   </span>
                   <span className="text-sm font-medium">{c.symbol}</span>
@@ -110,7 +107,7 @@ export function TrendingCoinsPanel({ onSelect }: Props) {
 export function HotStocksPanel({ onSelect }: Props) {
   const { data } = usePolling<BuzzPayload>("/api/buzz", 600_000);
   return (
-    <Panel icon={<IconTrendingUp size={15} />} title="Hot stocks" sub="most searched · Yahoo">
+    <Panel title="Hot stocks" sub="most searched · Yahoo">
       {!data ? (
         <Skeletons />
       ) : data.stocks.length === 0 ? (
@@ -124,7 +121,7 @@ export function HotStocksPanel({ onSelect }: Props) {
             <button
               key={s}
               onClick={() => onSelect(`custom|${s}|${s}`)}
-              className="rounded-full border border-border bg-surface2 px-3 py-1.5 text-sm font-medium transition-colors hover:border-accent/50 hover:text-accent"
+              className="rounded-full bg-surface2 px-3 py-1.5 text-sm font-medium transition-colors hover:border-accent/50 hover:text-accent"
               title={`View ${s} chart`}
             >
               {s}
@@ -154,9 +151,7 @@ export function EventRiskPanel() {
     : [];
 
   return (
-    <Panel
-      icon={<IconCalendar size={15} />}
-      title="Event risk"
+    <Panel title="Event risk"
       sub="high impact · ForexFactory"
     >
       {!data ? (
@@ -191,7 +186,7 @@ export function EventRiskPanel() {
                     {e.country}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-sm">{e.title}</span>
-                  <span className="num hidden text-[10px] text-muted/70 sm:inline">
+                  <span className="num hidden text-[10px] text-dim sm:inline">
                     {formatEventDay(e.ts, now)} {formatEventTime(e.ts, false)}
                   </span>
                   <span className="num shrink-0 text-xs text-accent">
@@ -233,7 +228,7 @@ export function EventRiskPanel() {
               </span>
             </li>
           ))}
-          <li className="px-2 pt-1 text-[10px] text-muted/60">
+          <li className="px-2 pt-1 text-[10px] text-dim">
             Live feed unreachable — showing the official published schedule.
           </li>
         </ul>
@@ -245,7 +240,7 @@ export function EventRiskPanel() {
 export function IpoPanel() {
   const { data } = usePolling<BuzzPayload>("/api/buzz", 600_000);
   return (
-    <Panel icon={<IconBell size={15} />} title="Upcoming IPOs" sub="next 45 days · Finnhub">
+    <Panel title="Upcoming IPOs" sub="next 45 days · Finnhub">
       {!data ? (
         <Skeletons />
       ) : data.iposNeedKey ? (
@@ -263,7 +258,7 @@ export function IpoPanel() {
                 {formatCalendarDate(ipo.date)}
               </span>
               <span className="min-w-0 flex-1 truncate text-xs">{ipo.name}</span>
-              <span className="num hidden text-[10px] text-muted/70 sm:inline">{ipo.exchange}</span>
+              <span className="num hidden text-[10px] text-dim sm:inline">{ipo.exchange}</span>
               <span className="num text-[11px] text-muted">{ipo.price}</span>
             </li>
           ))}

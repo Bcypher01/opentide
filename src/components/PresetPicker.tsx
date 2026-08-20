@@ -36,7 +36,7 @@ export default function PresetPicker() {
 
   return (
     <section
-      className="relative mt-4 overflow-hidden rounded-2xl border border-border bg-surface"
+      className="relative mt-4 overflow-hidden module"
       aria-label="Choose a trader profile"
     >
       <div className="px-5 py-6 sm:px-8 sm:py-7">
@@ -58,7 +58,7 @@ export default function PresetPicker() {
               <button
                 key={p.id}
                 onClick={() => pick(p.id)}
-                className="group flex flex-col rounded-xl border border-border bg-bg/40 p-4 text-left transition-colors hover:border-accent/50 hover:bg-surface2"
+                className="group flex flex-col rounded-xl bg-surface/40 p-4 text-left transition-colors hover:bg-surface2 hover:bg-surface2"
               >
                 <Icon
                   size={18}
@@ -80,7 +80,7 @@ export default function PresetPicker() {
           >
             Skip → show me the full board
           </button>
-          <span className="text-xs text-muted/60">
+          <span className="text-xs text-dim">
             You can switch any time from the header.
           </span>
         </div>

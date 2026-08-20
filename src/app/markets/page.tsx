@@ -13,7 +13,7 @@ import {
   TrendingCoinsPanel,
 } from "@/components/Buzz";
 import Heatmap from "@/components/Heatmap";
-import { IconActivity, IconNews, IconZap } from "@/components/Icons";
+
 import type { NewsItem } from "@/components/NewsFeed";
 import PulseSkeleton from "@/components/PulseSkeleton";
 import PulseStrip from "@/components/PulseStrip";
@@ -40,20 +40,11 @@ interface NewsPayload {
 
 /** Section band heading — labels the two halves of the page so users always
  *  know whether they're reading market *mood* or what's getting *attention*. */
-function Band({
-  icon,
-  label,
-  sub,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  sub: string;
-}) {
+function Band({ label, sub }: { label: string; sub: string }) {
   return (
-    <div className="mb-3 mt-8 flex items-baseline gap-2.5">
-      <span className="text-accent">{icon}</span>
-      <h2 className="font-display text-lg font-semibold tracking-tight">{label}</h2>
-      <span className="text-xs text-muted">{sub}</span>
+    <div className="mb-3 mt-10 flex items-baseline gap-3">
+      <h2 className="section-label">{label}</h2>
+      <span className="text-xs text-dim">{sub}</span>
     </div>
   );
 }
@@ -104,16 +95,10 @@ export default function MarketsPage() {
     <AppShell>
       <div>
         <header className="mt-2">
-          <h1 className="font-display flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
-            <IconActivity size={22} className="text-accent" />
-            Markets
-          </h1>
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">
-            The whole board in one place: how markets <em>feel</em> right now, and what
-            they&apos;re <em>watching</em>. Mood is a synthesized risk-on / risk-off read with
-            heatmaps and session stats; Attention is the trending names, news clusters, scheduled
-            event risk and IPOs. Composites and attention, not buy signals — tap anything to open
-            its chart.
+          <h1 className="font-display text-[28px] font-semibold tracking-tight">Markets</h1>
+          <p className="mt-2 max-w-[58ch] text-sm leading-relaxed text-muted">
+            How the board <em>feels</em> right now, and what it&apos;s <em>watching</em>.
+            Composites and attention, not buy signals — tap anything to open its chart.
           </p>
         </header>
 
@@ -121,11 +106,7 @@ export default function MarketsPage() {
         <PulseStrip data={pulse.data} />
 
         {/* ───────────────────────── MOOD ───────────────────────── */}
-        <Band
-          icon={<IconActivity size={18} />}
-          label="Mood"
-          sub="how the board feels right now"
-        />
+        <Band label="Mood" sub="how the board feels right now" />
         {ready ? (
           <>
             <RiskDial pulse={pulse.data} quoteOf={quoteOf} />
@@ -137,29 +118,20 @@ export default function MarketsPage() {
         )}
 
         {/* ──────────────────────── ATTENTION ───────────────────── */}
-        <Band
-          icon={<IconZap size={18} />}
-          label="Attention"
-          sub="what the market is watching"
-        />
+        <Band label="Attention" sub="what the market is watching" />
 
         {/* Personalized AI ideas from live context + the user's watchlist.
             Self-hides when no LLM key is configured. */}
         <AiInsights onSelectAsset={openChart} />
 
-        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-4 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           <TrendingCoinsPanel onSelect={openChart} />
 
           {/* Most mentioned in news */}
-          <div className="flex flex-col rounded-2xl border border-border bg-surface p-4">
-            <div className="flex items-center gap-2">
-              <span className="text-accent">
-                <IconNews size={15} />
-              </span>
-              <h3 className="font-display text-sm font-semibold">Dominating the news</h3>
-              <span className="ml-auto text-[10px] uppercase tracking-wider text-muted/60">
-                last 40 stories · Opentide wire
-              </span>
+          <div className="module flex flex-col p-4">
+            <div className="flex items-baseline gap-3">
+              <h3 className="module-title">Dominating the news</h3>
+              <span className="ml-auto text-[11px] text-dim">last 40 stories</span>
             </div>
             <div className="mt-3">
               {news.data === null ? (
@@ -182,14 +154,14 @@ export default function MarketsPage() {
                           className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface2"
                           title={`View ${a.symbol} chart`}
                         >
-                          <span className="num w-5 shrink-0 text-center text-[11px] text-muted/60">
+                          <span className="num w-5 shrink-0 text-center text-[11px] text-dim">
                             {i + 1}
                           </span>
-                          <span className="text-sm font-medium">{a.symbol}</span>
-                          <span className="min-w-0 flex-1 truncate text-xs text-muted">
+                          <span className="text-[13.5px] font-medium">{a.symbol}</span>
+                          <span className="min-w-0 flex-1 truncate text-xs text-dim">
                             {a.name}
                           </span>
-                          <span className="num rounded-full bg-surface2 px-2 py-0.5 text-[10px] text-muted">
+                          <span className="num rounded-full bg-surface2 px-2 py-0.5 text-[10px] text-dim">
                             {count} stories
                           </span>
                         </button>
@@ -206,7 +178,7 @@ export default function MarketsPage() {
           <IpoPanel />
         </div>
 
-        <p className="mt-6 rounded-2xl border border-border bg-surface p-4 text-xs leading-relaxed text-muted">
+        <p className="module mt-8 p-4 text-xs leading-relaxed text-dim">
           <span className="font-medium text-text">How to read this page.</span>{" "}
           <span className="font-medium text-text">Mood:</span> the risk dial averages cross-market
           signals onto one −100…+100 scale (the dollar counts inversely); heatmaps colour 24h change

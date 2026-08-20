@@ -32,7 +32,7 @@ export default function WelcomeBack({
   return (
     <section
       aria-label="While you were away"
-      className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-accent/25 bg-accent/5 px-4 py-2.5"
+      className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-accent/[0.07] px-4 py-2.5"
     >
       <span className="text-xs font-medium text-accent">
         While you were away ({awayLabel(diff.awayMs)})
@@ -48,7 +48,7 @@ export default function WelcomeBack({
               key={m.id}
               onClick={() => onSelect(customAssets[m.id]?.chartId ?? m.id)}
               title={`Chart ${a.symbol}`}
-              className="flex items-baseline gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-xs transition-colors hover:border-accent/40"
+              className="flex items-baseline gap-1.5 rounded-full bg-surface px-3 py-1 text-xs transition-colors hover:bg-surface2"
             >
               <span className="font-medium">{a.symbol}</span>
               <span className={`num ${up ? "text-bull" : "text-bear"}`}>

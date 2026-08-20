@@ -298,7 +298,7 @@ export default function CommandPalette() {
           />
 
           <motion.div
-            className="relative flex max-h-[72vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+            className="relative flex max-h-[72vh] w-full max-w-xl flex-col overflow-hidden module shadow-2xl"
             initial={{ opacity: 0, scale: 0.97, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98, y: -6 }}
@@ -358,7 +358,7 @@ export default function CommandPalette() {
                 <>
                   {groups.map((g) => (
                   <div key={g.label} className="mb-1">
-                    <div className="px-4 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wider text-muted/70">
+                    <div className="px-4 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wider text-dim">
                       {g.label}
                     </div>
                     {g.results.map((r) => {
@@ -425,13 +425,13 @@ export default function CommandPalette() {
                               className={`shrink-0 rounded-md p-1.5 transition-colors ${
                                 watched
                                   ? "text-accent"
-                                  : "text-muted/50 hover:text-muted"
+                                  : "text-dim/70 hover:text-muted"
                               }`}
                             >
                               <IconStar size={15} filled={watched} />
                             </button>
                           ) : (
-                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted/60">
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-dim">
                               {meta.badge}
                             </span>
                           )}
@@ -441,7 +441,7 @@ export default function CommandPalette() {
                   </div>
                   ))}
                   {loading && (
-                    <div className="flex items-center gap-2 px-4 py-2 text-[12px] text-muted/70">
+                    <div className="flex items-center gap-2 px-4 py-2 text-[12px] text-dim">
                       <Spinner />
                       <span>Searching every listed ticker and coin…</span>
                     </div>
@@ -458,7 +458,7 @@ export default function CommandPalette() {
             )}
 
             {/* footer — keyboard hints */}
-            <div className="flex items-center gap-3 border-t border-border px-4 py-2 text-[11px] text-muted/70">
+            <div className="flex items-center gap-3 border-t border-border px-4 py-2 text-[11px] text-dim">
               <Kbd>↑</Kbd>
               <Kbd>↓</Kbd>
               <span>navigate</span>
@@ -495,7 +495,7 @@ function Spinner() {
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="num rounded border border-border bg-surface2 px-1.5 py-0.5 text-[10px] text-muted">
+    <kbd className="num rounded bg-surface2 px-1.5 py-0.5 text-[10px] text-muted">
       {children}
     </kbd>
   );

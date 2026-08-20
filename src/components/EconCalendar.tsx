@@ -111,10 +111,10 @@ export default function EconCalendar({
   return (
     <div key="econ-loaded" id="econ-calendar" className="fade-in mt-3 scroll-mt-24 border-t border-border pt-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-muted/70">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-dim">
           Economic calendar
         </span>
-        <span className="hidden text-[10px] text-muted/50 sm:inline">
+        <span className="hidden text-[10px] text-dim/70 sm:inline">
           ◆ on the timeline = scheduled release · tap a chip to learn what it is
         </span>
 
@@ -164,7 +164,7 @@ export default function EconCalendar({
           <span
             key={a.kind}
             title="From the official published schedule"
-            className="flex min-h-[34px] items-center gap-2 rounded-full border border-border bg-surface2 px-3 py-1 text-xs text-muted"
+            className="flex min-h-[34px] items-center gap-2 rounded-full bg-surface2 px-3 py-1 text-xs text-muted"
           >
             <ImpactDot impact="High" />
             <span className="font-medium text-text">{a.title}</span>
@@ -219,7 +219,7 @@ export default function EconCalendar({
                 {fc && (
                   <p className="num mt-1.5 text-xs text-text/90">{fc}</p>
                 )}
-                <p className="mt-2 text-[10px] uppercase tracking-wider text-muted/60">
+                <p className="mt-2 text-[10px] uppercase tracking-wider text-dim">
                   Source: ForexFactory (unofficial feed) · times shown in{" "}
                   {useUTC ? "UTC" : "your local time"}
                 </p>
@@ -231,7 +231,7 @@ export default function EconCalendar({
 
       {/* "Show all" — compact two-week list grouped by day */}
       {showAll && events && (
-        <div className="mt-2 max-h-64 overflow-y-auto rounded-xl border border-border bg-surface2/50">
+        <div className="mt-2 max-h-64 overflow-y-auto rounded-xl bg-surface2/50">
           {groups.map((g) => (
             <div key={g.day}>
               <div className="sticky top-0 bg-surface px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-muted">

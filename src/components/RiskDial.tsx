@@ -76,7 +76,7 @@ function RiskDialSkeleton() {
         <div className="skeleton h-4 w-20 rounded" />
         <div className="skeleton h-3 w-44 rounded" />
       </div>
-      <div className="rounded-2xl border border-border bg-surface p-4">
+      <div className="module p-4">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
           <div className="skeleton h-[104px] w-[200px] shrink-0 rounded-t-full" />
           <div className="min-w-0 flex-1">
@@ -124,19 +124,19 @@ export default function RiskDial({ pulse, quoteOf }: Props) {
   return (
     <section key="riskdial-loaded" className="fade-in mt-5" aria-label="Cross-market risk dial">
       <div className="mb-2 flex items-baseline gap-3">
-        <h2 className="font-display text-base font-semibold tracking-tight">Risk dial</h2>
-        <span className="text-xs text-muted">risk-on / risk-off · composite</span>
+        <h2 className="section-label">Risk dial</h2>
+        <span className="text-xs text-dim">risk-on / risk-off · composite</span>
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
-          className="ml-auto rounded-full border border-border px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-text"
+          className="ml-auto rounded-full border border-white/[0.055] px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-text"
         >
           {open ? "Hide inputs" : "How it's built"}
         </button>
       </div>
 
-      <div className="rounded-2xl border border-border bg-surface p-4">
+      <div className="module p-4">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6">
           {/* Gauge with centred score */}
           <div className="shrink-0">
@@ -150,7 +150,7 @@ export default function RiskDial({ pulse, quoteOf }: Props) {
               {dial.components.map((c) => (
                 <span
                   key={c.key}
-                  className="flex items-baseline gap-1.5 rounded-full border border-border bg-surface2 px-2.5 py-1"
+                  className="flex items-baseline gap-1.5 rounded-full bg-surface2 px-2.5 py-1"
                   title={`${c.label}: ${c.detail}`}
                 >
                   <span className="text-[10px] uppercase tracking-wider text-muted">{c.label}</span>

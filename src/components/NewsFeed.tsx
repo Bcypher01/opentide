@@ -57,18 +57,18 @@ export default function NewsFeed({
 
   return (
     <section
-      className={`flex h-full flex-col rounded-2xl border border-border bg-surface ${heightClass}`}
+      className={`module flex h-full flex-col ${heightClass}`}
       aria-label="Market news"
     >
-      <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <h2 className="text-xs font-medium uppercase tracking-wider text-muted">Newswire</h2>
-        <div className="flex gap-1 rounded-lg border border-border bg-surface2 p-0.5">
+      <div className="flex items-center justify-between gap-2 px-4 pb-2.5 pt-4">
+        <h2 className="module-title">Newswire</h2>
+        <div className="flex gap-1 rounded-lg bg-surface2 p-0.5">
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`min-h-[28px] rounded-md px-2 py-0.5 text-[11px] transition-colors ${
-                tab === t.id ? "bg-text text-bg" : "text-muted hover:text-text"
+                tab === t.id ? "bg-text text-bg" : "text-dim hover:text-text"
               }`}
             >
               {t.label}
@@ -109,9 +109,9 @@ export default function NewsFeed({
               } ${isPreview && sessionFit ? "bg-accent/5 ring-1 ring-accent/10" : ""}`}
             >
               <a href={it.link} target="_blank" rel="noreferrer" className="block">
-                <h3 className="text-[13px] leading-snug text-text">{it.title}</h3>
+                <h3 className="text-[13.5px] leading-snug text-text">{it.title}</h3>
               </a>
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-dim">
                 <span
                   className="inline-block h-1.5 w-1.5 rounded-full"
                   style={{ backgroundColor: MARKET_COLOR[it.market] }}
@@ -131,9 +131,9 @@ export default function NewsFeed({
                       key={id}
                       onClick={() => onSelectAsset(id)}
                       title={`View ${a.symbol} chart`}
-                      className="rounded-full border border-border bg-surface2 px-2 py-0.5 text-[10px] text-muted transition-colors hover:border-accent/50 hover:text-accent"
+                      className="rounded-full bg-surface2 px-2 py-0.5 text-[10px] text-dim transition-colors hover:text-text"
                     >
-                      {a.symbol} ↗
+                      {a.symbol}
                     </button>
                   );
                 })}

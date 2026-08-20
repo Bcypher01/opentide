@@ -293,7 +293,7 @@ function AboutModal() {
 
             {/* panel */}
             <motion.div
-              className="relative flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+              className="relative flex max-h-full w-full max-w-2xl flex-col overflow-hidden module shadow-2xl"
               initial={{ opacity: 0, y: 28, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1, transition: PANEL_SPRING }}
               exit={{
@@ -372,7 +372,7 @@ function AboutModal() {
                             {s.details.map((d) => (
                               <li
                                 key={d}
-                                className="flex gap-3 rounded-xl border border-border bg-bg/40 px-4 py-2.5"
+                                className="flex gap-3 rounded-xl bg-surface/40 px-4 py-2.5"
                               >
                                 <span
                                   className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
@@ -396,7 +396,7 @@ function AboutModal() {
                                   href={l.href}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-bg/40 px-4 py-2.5 text-sm font-medium text-text/90 transition-colors hover:border-accent/40 hover:text-accent"
+                                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-surface/40 px-4 py-2.5 text-sm font-medium text-text/90 transition-colors hover:bg-surface2 hover:text-accent"
                                 >
                                   {l.label}
                                   <IconArrowUpRight size={14} />
@@ -432,7 +432,7 @@ function AboutModal() {
                   onClick={() => go(index - 1)}
                   disabled={index === 0}
                   aria-label="Previous slide"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted transition-colors enabled:hover:border-accent/40 enabled:hover:text-text disabled:opacity-30"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.055] text-muted transition-colors enabled:hover:border-accent/40 enabled:hover:text-text disabled:opacity-30"
                 >
                   ‹
                 </button>
